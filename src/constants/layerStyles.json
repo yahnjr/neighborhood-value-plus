@@ -1,0 +1,79 @@
+{
+  "NeighborhoodBoundaries": {
+    "type": "fill",
+    "source": "neighborhoods",
+    "layout": {},
+    "paint": {
+      "fill-color": [
+        "match",
+        ["get", "randoNum"],
+          1, "#FF6B6B",
+          2, "#4ECDC4",
+          3, "#FFD166",
+          4, "#6A4C93",
+          5, "#43AA8B",
+          6, "#F3722C",
+          7, "#277DA1",
+          8, "#F94144",
+          9, "#90BE6D",
+          10, "#577590",
+          "#CCCCCC"
+      ],
+      "fill-opacity": 0.3,
+      "fill-outline-color": "#FFFFFF"
+    }
+  },
+  "NeighborhoodBoundariesOutline": {
+    "type": "line",
+    "source": "neighborhoods",
+    "layout": {},
+    "paint": {
+      "line-color": "#FFFFFF",
+      "line-width": 2
+    }
+  },
+  "addpoints": {
+    "type": "circle",
+    "source": "addpoints",
+    "layout": {},
+    "paint": {
+      "circle-color": [
+        "match",
+        ["get", "Service Ty"],
+          "Lawn Restoration", "#008000",      
+          "Sidewalk Repair", "#808080",          
+          "Homeless Outreach", "#FFA500",       
+          "Legacy Sponsored Block", "#FFD700",   
+          "Lifestyle Lottery Winner", "#800080", 
+          "Neighborhood History", "#0000FF",    
+          "Home For Sale", "#008080",             
+          "Overnight Patrol", "#000080",          
+          "Vacant Home Cleanup", "#800000",       
+          "Trash or Debris Dump Site", "#000000",
+          "Overgrown Bushes or Trees", "#228B22",
+          "#999999"
+      ],
+      "circle-radius": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        10, 4,
+        15, 8,
+        20, 12
+      ],
+      "circle-stroke-width": 2,
+      "circle-stroke-color": "#FFFFFF"
+    }
+  },
+  "Sponsors": {
+    "type": "circle",
+    "source": "sponsors",
+    "layout": {},
+    "paint": {
+      "circle-color": "#FFD700",
+      "circle-radius": 10,
+      "circle-stroke-width": 2,
+      "circle-stroke-color": "#FFA500"
+    }
+  }
+}
