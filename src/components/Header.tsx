@@ -22,8 +22,8 @@ interface HeaderProps {
     setFilterPanelOpen: (open: boolean) => void;
     isAddingPoint: boolean;
     setIsAddingPoint: (isAdding: boolean) => void;
-    addPointCoordinates?: { lat: number; lng: number };
-    setAddPointCoordinates: (coords: { lat: number; lng: number } | null) => void;
+    addPointCoordinates?: { lat: number; lng: number; neighborhood?: string | null; crossStreet?: string | null };
+    setAddPointCoordinates: (coords: { lat: number; lng: number; neighborhood?: string | null; crossStreet?: string | null } | null) => void;
 }
 
 

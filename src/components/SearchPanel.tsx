@@ -31,7 +31,7 @@ const SearchPanel: React.FC<SearchPanelProps> = ({ onClose, onLocationSelect }) 
     const [error, setError] = useState<string | null>(null);
     const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Debounced search function
+    // Debounces the search input to avoid excessive API calls.
     useEffect(() => {
         if (searchQuery.trim().length < 3) {
             setSearchResults([]);
@@ -64,7 +64,7 @@ const SearchPanel: React.FC<SearchPanelProps> = ({ onClose, onLocationSelect }) 
         try {
             const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
             
-            // Geocoding API endpoint with bias towards Portland area
+            // Fetches geocoding results from Mapbox API, biased toward the Portland area.
             const response = await fetch(
                 `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?` +
                 `access_token=${mapboxToken}&` +

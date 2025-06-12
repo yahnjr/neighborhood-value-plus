@@ -1,44 +1,42 @@
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
+import { GeoJSONFeature } from '../services/geojsonService';
 
-interface AddPointPanelProps {
+interface EditPointPanelProps {
     onClose: () => void;
-    onAddPoint: (point: any) => void;
-    coordinates?: { lat: number; lng: number; neighborhood?: string | null; crossStreet?: string | null };
-    onCoordinatesChange: (coords: { lat: number; lng: number; neighborhood?: string | null } | null) => void;
-    setIsAddingPoint: (isAdding: boolean) => void;
+    onUpdatePoint: (point: GeoJSONFeature) => void;
+    onDeletePoint: (pointId: string) => void;
+    point: GeoJSONFeature;
 }
 
-const AddPointPanel: React.FC<AddPointPanelProps> = ({ onClose, onAddPoint, coordinates, onCoordinatesChange, setIsAddingPoint }) => {
+const EditPointPanel: React.FC<EditPointPanelProps> = ({ onClose, onUpdatePoint, onDeletePoint, point }) => {
     const [serviceType, setServiceType] = useState('');
     const [crossStreet, setCrossStreet] = useState('');
-    const [neighborhood, setNeighborhood] = useState(coordinates?.neighborhood || '');
+    const [neighborhood, setNeighborhood] = useState('');
     const [status, setStatus] = useState('Active');
     const [fullAddress, setFullAddress] = useState('');
     const [referralSource, setReferralSource] = useState('');
     const [estimate, setEstimate] = useState('');
-    const [latitude, setLatitude] = useState('');
-    const [longitude, setLongitude] = useState('');
 
     useEffect(() => {
-        if (coordinates) {
-            setLatitude(coordinates.lat.toString());
-            setLongitude(coordinates.lng.toString());
-            setNeighborhood(coordinates.neighborhood || '');
-            setCrossStreet(coordinates.crossStreet || '');
+        if (point && point.properties) {
+            setServiceType(point.properties["Service Ty"] || '');
+            setCrossStreet(point.properties["Cross Stre"] || '');
+            setNeighborhood(point.properties["neighbhood"] || '');
+            setStatus(point.properties["Status"] || 'Active');
+            setFullAddress(point.properties["Full Addre"] || '');
+            setReferralSource(point.properties["Refferal S"] || '');
+            setEstimate(point.properties["Estimate"] || '');
         }
-    }, [coordinates]);
+    }, [point]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        const newPoint = {
-            type: 'Feature',
-            geometry: {
-                type: 'Point',
-                coordinates: [parseFloat(longitude), parseFloat(latitude)]
-            },
+        const updatedPoint: GeoJSONFeature = {
+            ...point,
             properties: {
+                ...point.properties,
                 "Service Ty": serviceType,
                 "Cross Stre": crossStreet,
                 "neighbhood": neighborhood,
@@ -48,46 +46,33 @@ const AddPointPanel: React.FC<AddPointPanelProps> = ({ onClose, onAddPoint, coor
                 "Estimate": estimate
             }
         };
-        onAddPoint(newPoint);
+        onUpdatePoint(updatedPoint);
         onClose();
     };
 
-    const handleResetCoordinates = () => {
-        setLatitude('');
-        setLongitude('');
-        if (onCoordinatesChange) {
-            onCoordinatesChange(null);
-        }
-        if (setIsAddingPoint) {
-            setIsAddingPoint(true);
+    const handleDelete = () => {
+        if (window.confirm('Are you sure you want to delete this point?')) {
+            // Assuming the point has a unique ID in its properties
+            const pointId = point.properties?.id;
+            if (pointId) {
+                onDeletePoint(pointId);
+                onClose();
+            } else {
+                alert("Could not find a unique ID for this point to delete.");
+            }
         }
     };
 
     return (
-        <div className="header-panel add-point-panel">
+        <div className="header-panel edit-point-panel">
             <div className="panel-header">
-                <h3>Add New Service Point</h3>
+                <h3>Edit Service Point</h3>
                 <button className="close-btn" onClick={onClose}>
                     <FontAwesomeIcon icon={faTimes} />
                 </button>
             </div>
             <div className="panel-content">
-                <form className="add-point-form" onSubmit={handleSubmit}>
-                    <div className="form-group coordinates-group">
-                        <div className="coords-display">
-                            <div>
-                                <label>Latitude</label>
-                                <input type="text" value={latitude} onChange={(e) => setLatitude(e.target.value)} required readOnly />
-                            </div>
-                            <div>
-                                <label>Longitude</label>
-                                <input type="text" value={longitude} onChange={(e) => setLongitude(e.target.value)} required readOnly />
-                            </div>
-                        </div>
-                        <button type="button" onClick={handleResetCoordinates} className="reset-coords-btn">
-                            Reset Location
-                        </button>
-                    </div>
+                <form className="edit-point-form" onSubmit={handleSubmit}>
                     <div className="form-group">
                         <label>Service Type</label>
                         <input type="text" value={serviceType} onChange={(e) => setServiceType(e.target.value)} required />
@@ -120,11 +105,14 @@ const AddPointPanel: React.FC<AddPointPanelProps> = ({ onClose, onAddPoint, coor
                         <label>Estimate</label>
                         <input type="text" value={estimate} onChange={(e) => setEstimate(e.target.value)} />
                     </div>
-                    <button type="submit" className="add-point-btn">Add Point</button>
+                    <div className="form-actions">
+                        <button type="submit" className="update-point-btn">Update Point</button>
+                        <button type="button" className="delete-point-btn" onClick={handleDelete}>Delete</button>
+                    </div>
                 </form>
             </div>
         </div>
     );
 };
 
-export default AddPointPanel;
+export default EditPointPanel;

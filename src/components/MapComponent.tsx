@@ -1,14 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Map, Source, Layer, NavigationControl, Marker } from 'react-map-gl';
-import { fetchAllGeoJSONLayers, filterAttributesForUser } from '../services/geojsonService';
-import { useAuth } from '../services/auth-context'; // Import the auth context
+import * as turf from '@turf/turf';
+import { fetchAllGeoJSONLayers } from '../services/geojsonService';
+import { useAuth } from '../services/auth-context';
 import SponsorPopup from './SponsorPopup';
 import PointPopup from './PointPopup';
+import EditPointPanel from './EditPointPanel';
 import NeighborhoodHoverPopup from './NeighborhoodHoverPopup'; 
 import { FilterState } from './FilterPanel';
 import layerStyles from '../constants/layerStyles.json';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { LayerProps } from 'react-map-gl';
+import hairconnect from '../assets/hairconnect.png';
+import bbox from '@turf/bbox';
+import type { Feature, Polygon, MultiPolygon } from 'geojson';
 
 // GeoJSON types
 interface GeoJSONFeature {
@@ -47,8 +52,8 @@ interface MapComponentProps {
   } | null;
   filters: FilterState;
   isAddingPoint: boolean;
-  onPointAdd: (coords: { lat: number; lng: number }) => void;
-  addPointCoordinates?: { lat: number; lng: number };
+  onPointAdd: (coords: { lat: number; lng: number; neighborhood?: string | null; crossStreet?: string | null }) => void;
+  addPointCoordinates?: { lat: number; lng: number; neighborhood?: string | null; crossStreet?: string | null };
 }
 
 const MapComponent: React.FC<MapComponentProps> = ({ 
@@ -79,8 +84,12 @@ const MapComponent: React.FC<MapComponentProps> = ({
   const [showSponsorHighlight, setShowSponsorHighlight] = useState(true);
   const [highlightedSponsor, setHighlightedSponsor] = useState<GeoJSONFeature | null>(null);
 
-  // State for addpoint popup
+  // State for popups
   const [selectedAddpoint, setSelectedAddpoint] = useState<GeoJSONFeature | null>(null);
+  const [editingAddpoint, setEditingAddpoint] = useState<GeoJSONFeature | null>(null);
+
+  // State for neighborhood selection
+  const [selectedNeighborhood, setSelectedNeighborhood] = useState<string | null>(null);
 
   // State for neighborhood hover
   const [hoveredNeighborhood, setHoveredNeighborhood] = useState<{
@@ -102,18 +111,10 @@ const MapComponent: React.FC<MapComponentProps> = ({
         
         const layers = await fetchAllGeoJSONLayers();
         
-        // Filter data based on user role
-        const filteredLayers: GeoJsonData = {};
-        Object.keys(layers).forEach(layerName => {
-          filteredLayers[layerName] = filterAttributesForUser(
-            layers[layerName], 
-            layerName, 
-            role
-          );
-        });
+        // Delete commented out block for filtering layers
         
-        console.log('Loaded and filtered layers:', Object.keys(filteredLayers));
-        setGeoJsonData(filteredLayers);
+        console.log('Loaded and filtered layers:', Object.keys(layers));
+        setGeoJsonData(layers);
       } catch (err) {
         console.error('Error loading GeoJSON data:', err);
         setError(`Failed to load map data: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -148,9 +149,13 @@ const MapComponent: React.FC<MapComponentProps> = ({
     } else {
       setInternalViewState(evt.viewState);
     }
+    // Reset neighborhood filter on zoom out
+    if (evt.viewState.zoom < 14) {
+      setSelectedNeighborhood(null);
+    }
   };
 
-  // Function to count points within a neighborhood
+  // Counts the number of service points within a given neighborhood.
   const countPointsInNeighborhood = (neighborhoodName: string): number => {
     if (!geoJsonData.addpoints) return 0;
     
@@ -160,13 +165,83 @@ const MapComponent: React.FC<MapComponentProps> = ({
     }).length;
   };
 
-  // Handle map clicks
+  // Utility function to check if a point is inside a polygon
+  const getNeighborhoodFromCoordinates = (
+    lng: number, 
+    lat: number, 
+    neighborhoodBoundaries: GeoJSON
+  ): string | null => {
+    const point = turf.point([lng, lat]);
+    
+    for (const feature of neighborhoodBoundaries.features) {
+      if (
+        feature.geometry.type === 'Polygon' ||
+        feature.geometry.type === 'MultiPolygon'
+      ) {
+        // Cast feature to correct type for turf
+        if (turf.booleanPointInPolygon(point, feature as Feature<Polygon | MultiPolygon>)) {
+          // Use MAPLABEL as primary, fallback to NAME
+          return feature.properties?.MAPLABEL || feature.properties?.NAME || null;
+          console.log('Found neighborhood:', feature.properties?.MAPLABEL || feature.properties?.NAME);
+        }
+      }
+    }
+    
+    return null;
+  };
+
+  // Handles clicks on the map to select points or place a new one.
   const handleMapClick = (event: any) => {
     if (isAddingPoint) {
       const { lng, lat } = event.lngLat;
-      onPointAdd({ lng, lat });
+
+      const roundedLng = Math.round(lng * 10000) / 10000;
+      const roundedLat = Math.round(lat * 10000) / 10000;
+
+      let neighborhood: string | null = null;
+      if (geoJsonData.NeighborhoodBoundaries) {
+        neighborhood = getNeighborhoodFromCoordinates(
+          roundedLng,
+          roundedLat,
+          geoJsonData.NeighborhoodBoundaries
+        )
+      }
+
+      let crossStreet: string | null = null;
+      if (geoJsonData.PortlandStreets) {
+        const point = turf.point([roundedLng, roundedLat]);
+        const streets = geoJsonData.PortlandStreets.features;
+        let streetsWithDistances: { street: any; distance: number }[] = [];
+
+        streets.forEach(street => {
+          if (street.geometry.type === 'LineString') {
+            const distance = turf.pointToLineDistance(point, street as Feature<any>);
+            streetsWithDistances.push({ street, distance });
+          } else if (street.geometry.type === 'MultiLineString') {
+            // For each LineString in the MultiLineString, treat as a separate street segment
+            street.geometry.coordinates.forEach((coords: any) => {
+              const singleLine = turf.lineString(coords, street.properties);
+              const distance = turf.pointToLineDistance(point, singleLine as Feature<any>);
+              // Attach the parent street's properties for name lookup
+              streetsWithDistances.push({ street: { ...street, geometry: { type: 'LineString', coordinates: coords } }, distance });
+            });
+          }
+        });
+
+        streetsWithDistances.sort((a, b) => a.distance - b.distance);
+
+        if (streetsWithDistances.length >= 2) {
+          const street1 = streetsWithDistances[0].street.properties?.STREETNAME;
+          const street2 = streetsWithDistances[1].street.properties?.STREETNAME;
+          crossStreet = `${street1} & ${street2}`;
+        }
+      }
+
+      onPointAdd({ lat: roundedLat, lng: roundedLng, neighborhood, crossStreet });
+
       return;
     }
+
     // Check if clicked on addpoints layer
     const features = event.features;
     if (features && features.length > 0) {
@@ -174,11 +249,50 @@ const MapComponent: React.FC<MapComponentProps> = ({
       if (addpointFeature) {
         console.log('Clicked addpoint:', addpointFeature);
         setSelectedAddpoint(addpointFeature);
+        return;
+      }
+
+      // Check if a neighborhood was clicked
+      const neighborhoodFeature = features.find((f: any) => f.source === 'neighborhoods');
+      if (neighborhoodFeature) {
+        const neighborhoodName = neighborhoodFeature.properties?.MAPLABEL || neighborhoodFeature.properties?.NAME;
+        if (neighborhoodName) {
+          setSelectedNeighborhood(neighborhoodName);
+          const [minLng, minLat, maxLng, maxLat] = bbox(neighborhoodFeature.geometry);
+          const newViewState = {
+            ...currentViewState,
+            longitude: (minLng + maxLng) / 2,
+            latitude: (minLat + maxLat) / 2,
+            zoom: 14,
+          };
+          if (onViewStateChange) {
+            onViewStateChange(newViewState);
+          } else {
+            setInternalViewState(newViewState);
+          }
+        }
       }
     }
   };
 
-  // Handle mouse move for neighborhood hover
+  const handleEditPoint = (point: GeoJSONFeature) => {
+    setEditingAddpoint(point);
+    setSelectedAddpoint(null); // Close the view-only popup
+  };
+
+  const handleUpdatePoint = (updatedPoint: GeoJSONFeature) => {
+    console.log("Update point:", updatedPoint);
+    // Here you would typically call a service to update the data in Firebase/backend
+    setEditingAddpoint(null);
+  };
+
+  const handleDeletePoint = (pointId: string) => {
+    console.log("Delete point:", pointId);
+    // Here you would typically call a service to delete the data in Firebase/backend
+    setEditingAddpoint(null);
+  };
+
+  // Shows a popup with neighborhood info on hover.
   const handleMouseMove = (event: any) => {
     const features = event.features;
     if (features && features.length > 0) {
@@ -204,7 +318,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
     }
   };
 
-  // Handle cursor changes on hover
+  // Changes the cursor to a pointer when hovering over interactive map elements.
   const handleMouseEnter = () => {
     if (currentViewState) {
       // Change cursor to pointer when hovering over interactive elements
@@ -216,7 +330,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
     setHoveredNeighborhood(null);
   };
 
-  // Create filtered GeoJSON data based on filters from props
+  // Filters map data based on selected neighborhoods and service types.
   const getFilteredData = () => {
     const filtered: GeoJsonData = { ...geoJsonData };
 
@@ -224,11 +338,12 @@ const MapComponent: React.FC<MapComponentProps> = ({
     if (filtered.addpoints) {
       let filteredFeatures = filtered.addpoints.features;
 
-      // Apply neighborhood filter (use 'neighborhood' property only)
-      if (filters.selectedNeighborhoods.length > 0) {
+      // Apply neighborhood filter from either props or internal state
+      const activeNeighborhoods = selectedNeighborhood ? [selectedNeighborhood] : filters.selectedNeighborhoods;
+      if (activeNeighborhoods.length > 0) {
         filteredFeatures = filteredFeatures.filter(feature => {
           const neighborhood = feature.properties?.neighbhood;
-          return filters.selectedNeighborhoods.includes(neighborhood);
+          return activeNeighborhoods.includes(neighborhood);
         });
       }
 
@@ -247,11 +362,11 @@ const MapComponent: React.FC<MapComponentProps> = ({
     }
 
     // Filter neighborhood boundaries to only show selected neighborhoods (use 'MAPLABEL' only)
-    if (filtered.NeighborhoodBoundaries && filters.selectedNeighborhoods.length > 0) {
+    const activeNeighborhoods = selectedNeighborhood ? [selectedNeighborhood] : filters.selectedNeighborhoods;
+    if (filtered.NeighborhoodBoundaries && activeNeighborhoods.length > 0) {
       const filteredBoundaries = filtered.NeighborhoodBoundaries.features.filter(feature => {
         const neighborhood = feature.properties?.MAPLABEL;
-        console.log('Comparing boundary MAPLABEL:', neighborhood, 'against', filters.selectedNeighborhoods);
-        return filters.selectedNeighborhoods.includes(neighborhood);
+        return activeNeighborhoods.includes(neighborhood);
       });
 
       filtered.NeighborhoodBoundaries = {
@@ -403,18 +518,22 @@ const MapComponent: React.FC<MapComponentProps> = ({
           </Source>
         )}
 
-        {/* Use filtered data for addpoints - now with click interaction */}
+        {/* Use filtered data for addpoints*/}
         {displayData.addpoints && (
           <Source id="addpoints" type="geojson" data={displayData.addpoints}>
             <Layer id="addpoints" {...(layerStyles.addpoints as LayerProps)} />
           </Source>
         )}
 
-        {/* Sponsors layer (not filtered) */}
+        {/* Sponsors layer*/}
         {geoJsonData.Sponsors && (
           <Source id="sponsors" type="geojson" data={geoJsonData.Sponsors}>
             <Layer {...(layerStyles.Sponsors as LayerProps)} />
           </Source>
+        )}
+
+        {geoJsonData.PortlandStreets && (
+          <Source id="streets" type="geojson" data={geoJsonData.PortlandStreets}></Source>
         )}
 
         {/* Search Result Marker */}
@@ -449,7 +568,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
           >
             <div className="sponsor-marker-container">
               <img
-                src="/src/assets/hairconnect.png"
+                src={hairconnect}
                 alt="Sponsor Logo"
                 className="sponsor-marker-img"
               />
@@ -458,12 +577,12 @@ const MapComponent: React.FC<MapComponentProps> = ({
         )}
 
         {/* Sponsor Popup */}
-        {showSponsorHighlight && highlightedSponsor && !selectedAddpoint && (
+        {showSponsorHighlight && highlightedSponsor && !selectedAddpoint && !editingAddpoint && (
           <div
             style={{
               position: 'fixed',
               left: 24,
-              bottom: 24, // Always 24 if no addpoint popup
+              bottom: 24,
               zIndex: 1000,
               background: 'white',
               borderRadius: 12,
@@ -513,12 +632,23 @@ const MapComponent: React.FC<MapComponentProps> = ({
               location={selectedAddpoint.properties?.["Cross Stre"]}
               status={selectedAddpoint.properties?.Status}
               fullAddress={selectedAddpoint.properties?.["Full Addre"]}
-              referralSource={selectedAddpoint.properties?.["Refferal S"]}
+              referralSource={selectedAddpoint.properties?.["Referral S"]}
               estimate={selectedAddpoint.properties?.Estimate}
               onClose={() => setSelectedAddpoint(null)}
+              onEdit={() => handleEditPoint(selectedAddpoint)}
             />
           );
         })()
+      )}
+
+      {/* Edit Point Panel- opened from inside popup in admin mode*/}
+      {editingAddpoint && (
+        <EditPointPanel
+          point={editingAddpoint}
+          onClose={() => setEditingAddpoint(null)}
+          onUpdatePoint={handleUpdatePoint}
+          onDeletePoint={handleDeletePoint}
+        />
       )}
     </div>
   );

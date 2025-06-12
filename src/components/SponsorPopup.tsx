@@ -1,4 +1,5 @@
 import React from 'react';
+import hairconnect from '../assets/hairconnect.png';
 
 interface SponsorPopupProps {
   title: string;
@@ -18,7 +19,7 @@ const SponsorPopup: React.FC<SponsorPopupProps> = ({ title, name, crossStreet, i
       <div className="sponsor-popup-content">
         <a href={instagram} target="_blank" className="sponsor-popup-link">
           <img
-            src="/src/assets/hairconnect.png"
+            src={hairconnect}
             alt="Sponsor Logo"
             className="sponsor-popup-logo"
           />

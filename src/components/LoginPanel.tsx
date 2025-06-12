@@ -36,7 +36,7 @@ const LoginPanel: React.FC<LoginPanelProps> = ({ onClose, onLoginSuccess }) => {
 
     const auth = getAuth();
 
-    // Function to get user role from Firestore
+    // Fetches the user's role from the Firestore database.
     const getUserRole = async (uid: string): Promise<UserRole> => {
         try {
             const userDoc = await getDoc(doc(db, 'users', uid));
@@ -50,7 +50,7 @@ const LoginPanel: React.FC<LoginPanelProps> = ({ onClose, onLoginSuccess }) => {
         }
     };
 
-    // Function to save user data to Firestore
+    // Saves user data (email, role, timestamps) to Firestore.
     const saveUserData = async (uid: string, email: string, role: UserRole) => {
         try {
             await setDoc(doc(db, 'users', uid), {
@@ -65,7 +65,7 @@ const LoginPanel: React.FC<LoginPanelProps> = ({ onClose, onLoginSuccess }) => {
         }
     };
 
-    // Handle login
+    // Handles the user login process with email and password.
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         console.log('Login handler called');
@@ -84,7 +84,7 @@ const LoginPanel: React.FC<LoginPanelProps> = ({ onClose, onLoginSuccess }) => {
                 lastLogin: new Date()
             }, { merge: true });
 
-            // Removed unused userData variable
+            // Delete unused userData variable comment
 
             if (onLoginSuccess) onLoginSuccess();
         } catch (error: any) {
@@ -94,7 +94,7 @@ const LoginPanel: React.FC<LoginPanelProps> = ({ onClose, onLoginSuccess }) => {
         }
     };
 
-    // Handle registration
+    // Handles the user registration process.
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
         console.log('Register handler called');
@@ -108,7 +108,7 @@ const LoginPanel: React.FC<LoginPanelProps> = ({ onClose, onLoginSuccess }) => {
             // Save user data with selected role
             await saveUserData(user.uid, user.email!, selectedRole);
 
-            // Removed unused userData variable
+            // Delete unused userData variable comment
 
             if (onLoginSuccess) onLoginSuccess();
             // Do not close panel here

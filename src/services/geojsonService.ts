@@ -20,22 +20,9 @@ export interface GeoJSON {
 const LAYER_NAMES = [
   'NeighborhoodBoundaries',
   'addpoints', 
-  'Sponsors'
+  'Sponsors',
+  'PortlandStreets'
 ];
-
-// Define public attributes for each layer (what non-authenticated users can see)
-const PUBLIC_ATTRIBUTES: { [layerName: string]: string[] } = {
-  NeighborhoodBoundaries: ['NAME', 'MAPLABEL', 'geometry'],
-  addpoints: ['Service Ty', 'Cross Stre', 'neighbhood', 'Status', 'geometry'],
-  Sponsors: ['Name', 'CrossStreet', 'Instagram', 'geometry']
-};
-
-// Define admin attributes (additional attributes admins can see)
-const ADMIN_ATTRIBUTES: { [layerName: string]: string[] } = {
-  NeighborhoodBoundaries: [],
-  addpoints: ['Full Addre', 'Refferal S', 'Estimate'],
-  Sponsors: []
-};
 
 export const fetchGeoJSONLayer = async (layerName: string): Promise<GeoJSON> => {
   try {
@@ -110,39 +97,4 @@ export const fetchAllGeoJSONLayers = async (): Promise<{ [key: string]: GeoJSON 
   
   // Return what we successfully loaded
   return results;
-};
-
-// Filter attributes based on user role
-export const filterAttributesForUser = (
-  geoJson: GeoJSON, 
-  layerName: string, 
-  userRole: 'User' | 'Admin' | null = null
-): GeoJSON => {
-  const allowedAttributes = PUBLIC_ATTRIBUTES[layerName] || [];
-  const adminAttributes = ADMIN_ATTRIBUTES[layerName] || [];
-  
-  // If user is admin, they get all attributes
-  const finalAttributes = userRole === 'Admin' 
-    ? [...allowedAttributes, ...adminAttributes]
-    : allowedAttributes;
-  
-  const filteredFeatures = geoJson.features.map(feature => ({
-    ...feature,
-    properties: Object.keys(feature.properties || {})
-      .filter(key => finalAttributes.includes(key))
-      .reduce((obj, key) => {
-        obj[key] = feature.properties[key];
-        return obj;
-      }, {} as { [key: string]: any })
-  }));
-  
-  return {
-    ...geoJson,
-    features: filteredFeatures
-  };
-};
-
-// Legacy function for backward compatibility
-export const filterPublicAttributes = (geoJson: GeoJSON, layerName: string): GeoJSON => {
-  return filterAttributesForUser(geoJson, layerName, null);
 };

@@ -33,7 +33,7 @@ function App() {
   });
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
   const [isAddingPoint, setIsAddingPoint] = useState(false);
-  const [addPointCoordinates, setAddPointCoordinates] = useState<{ lat: number; lng: number } | null>(null);
+  const [addPointCoordinates, setAddPointCoordinates] = useState<{ lat: number; lng: number; neighborhood?: string | null; crossStreet?: string | null } | null>(null);
 
   const handleLocationSelect = (locationData: MapViewState & { address: string }) => {
     // Update map view state
@@ -66,7 +66,7 @@ function App() {
     setFilters(newFilters);
   };
 
-  const handlePointAdd = (coords: { lat: number; lng: number }) => {
+  const handlePointAdd = (coords: { lat: number; lng: number; neighborhood?: string | null; crossStreet?: string | null }) => {
     setAddPointCoordinates(coords);
     setIsAddingPoint(false); // Turn off adding mode after selecting a point
   };

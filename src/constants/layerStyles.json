@@ -32,6 +32,15 @@
       "line-width": 2
     }
   },
+  "PortlandStreets": {
+    "type": "line",
+    "source": "streets",
+    "layout": {},
+    "paint": {
+      "line-color": "#FFFFFF",
+      "line-width": 0
+    }
+  },
   "addpoints": {
     "type": "circle",
     "source": "addpoints",

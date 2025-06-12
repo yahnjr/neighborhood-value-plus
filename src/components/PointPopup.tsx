@@ -9,6 +9,7 @@ interface PointPopupProps {
   referralSource?: string;
   estimate?: string;
   onClose: () => void;
+  onEdit: () => void;
 }
 
 const PointPopup: React.FC<PointPopupProps> = ({
@@ -18,7 +19,8 @@ const PointPopup: React.FC<PointPopupProps> = ({
   fullAddress,
   referralSource,
   estimate,
-  onClose
+  onClose,
+  onEdit
 }) => {
   const { userData } = useAuth();
   const isAdmin = userData?.role === 'Admin';
@@ -86,6 +88,14 @@ const PointPopup: React.FC<PointPopupProps> = ({
           </div>
         )}
       </div>
+      {/* Footer with Edit button */}
+      {isAdmin && (
+        <div className="point-popup-footer">
+          <button className="edit-button" onClick={onEdit}>
+            Edit
+          </button>
+        </div>
+      )}
     </div>
   );
 };
