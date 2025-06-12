@@ -39,7 +39,7 @@ const Header: React.FC<HeaderProps> = ({
     setAddPointCoordinates
 }) => {
     const [activePanel, setActivePanel] = useState<string | null>(null);
-    const { user, userData, isAnonymous, signOut } = useAuth();
+    const { user: _user, userData, isAnonymous: _isAnonymous, signOut: _signOut } = useAuth();
 
     useEffect(() => {
         if (addPointCoordinates) {
