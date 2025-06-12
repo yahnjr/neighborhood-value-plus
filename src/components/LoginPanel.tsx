@@ -5,8 +5,7 @@ import { useAuth } from '../services/auth-context';
 import { 
     getAuth, 
     signInWithEmailAndPassword, 
-    createUserWithEmailAndPassword,
-    sendPasswordResetEmail
+    createUserWithEmailAndPassword
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase'; 
@@ -26,14 +25,14 @@ interface LoginPanelProps {
 }
 
 const LoginPanel: React.FC<LoginPanelProps> = ({ onClose, onLoginSuccess }) => {
-    const { user, userData, isAnonymous, signOut } = useAuth();
+    const { user, userData, isAnonymous: _isAnonymous, signOut } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isRegistering, setIsRegistering] = useState(false);
     const [selectedRole, setSelectedRole] = useState<UserRole>('User');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [message, setMessage] = useState<string | null>(null);
+    // const [message, setMessage] = useState<string | null>(null);
 
     const auth = getAuth();
 
@@ -78,19 +77,14 @@ const LoginPanel: React.FC<LoginPanelProps> = ({ onClose, onLoginSuccess }) => {
             const user = userCredential.user;
             
             // Get user role from Firestore
-            const role = await getUserRole(user.uid);
+            await getUserRole(user.uid);
             
             // Update last login
             await setDoc(doc(db, 'users', user.uid), {
                 lastLogin: new Date()
             }, { merge: true });
 
-            const userData: UserData = {
-                uid: user.uid,
-                email: user.email!,
-                role,
-                displayName: user.displayName || undefined
-            };
+            // Removed unused userData variable
 
             if (onLoginSuccess) onLoginSuccess();
         } catch (error: any) {
@@ -114,12 +108,7 @@ const LoginPanel: React.FC<LoginPanelProps> = ({ onClose, onLoginSuccess }) => {
             // Save user data with selected role
             await saveUserData(user.uid, user.email!, selectedRole);
 
-            const userData: UserData = {
-                uid: user.uid,
-                email: user.email!,
-                role: selectedRole,
-                displayName: user.displayName || undefined
-            };
+            // Removed unused userData variable
 
             if (onLoginSuccess) onLoginSuccess();
             // Do not close panel here

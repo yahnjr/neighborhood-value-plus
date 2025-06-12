@@ -61,7 +61,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
   addPointCoordinates
 }) => {
   // Get authentication state
-  const { user, userData, isAnonymous, loading: authLoading } = useAuth();
+  const { user: _user, userData, isAnonymous, loading: authLoading } = useAuth();
   
   // Use external viewState if provided, otherwise use internal state
   const [internalViewState, setInternalViewState] = useState({
