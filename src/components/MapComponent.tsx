@@ -231,8 +231,8 @@ const MapComponent: React.FC<MapComponentProps> = ({
         streetsWithDistances.sort((a, b) => a.distance - b.distance);
 
         if (streetsWithDistances.length >= 2) {
-          const street1 = streetsWithDistances[0].street.properties?.STREETNAME;
-          const street2 = streetsWithDistances[1].street.properties?.STREETNAME;
+          const street1 = streetsWithDistances[0].street.properties?.FullName;
+          const street2 = streetsWithDistances[1].street.properties?.FullName;
           crossStreet = `${street1} & ${street2}`;
         }
       }
@@ -607,7 +607,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
 
         {/* Temporary marker for add-point mode */}
         {addPointCoordinates && (
-          <Marker longitude={addPointCoordinates.lng} latitude={addPointCoordinates.lat} anchor="bottom">
+          <Marker longitude={addPointCoordinates.lng} latitude={addPointCoordinates.lat} anchor="center">
             <div className="add-point-marker" />
           </Marker>
         )}

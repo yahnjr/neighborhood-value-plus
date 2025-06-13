@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
 import { GeoJSONFeature } from '../services/geojsonService';
+import ServiceTypeDropdown from './ServiceTypeDropdown';
+import { SERVICE_TYPES } from '../constants/serviceTypes';
 
 interface EditPointPanelProps {
     onClose: () => void;
@@ -73,10 +75,10 @@ const EditPointPanel: React.FC<EditPointPanelProps> = ({ onClose, onUpdatePoint,
             </div>
             <div className="panel-content">
                 <form className="edit-point-form" onSubmit={handleSubmit}>
-                    <div className="form-group">
-                        <label>Service Type</label>
-                        <input type="text" value={serviceType} onChange={(e) => setServiceType(e.target.value)} required />
-                    </div>
+                    <ServiceTypeDropdown
+                        selectedServiceType={serviceType}
+                        onServiceTypeChange={setServiceType}
+                    />
                     <div className="form-group">
                         <label>Cross Street</label>
                         <input type="text" value={crossStreet} onChange={(e) => setCrossStreet(e.target.value)} required />

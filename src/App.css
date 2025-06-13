@@ -943,6 +943,16 @@
   background-color: #218838;
 }
 
+.add-point-marker {
+  width: 28px;
+  height: 28px;
+  background: #ffc800;
+  border: 3px solid #324f4f;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  position: relative;
+}
+
 /* Edit Point Panel Styles */
 .edit-point-panel .form-actions {
   display: flex;
