@@ -6,6 +6,9 @@ import {
   faChevronUp
 } from '@fortawesome/free-solid-svg-icons';
 import { SERVICE_TYPES } from '../constants/serviceTypes';
+import { useAuth } from '../services/auth-context';
+import contractorTypesJson from '../constants/contractorTypes.json';
+const contractorTypes: Record<string, string[]> = contractorTypesJson;
 
 // Define types for our filter data
 export interface Neighborhood {
@@ -44,12 +47,21 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
   onFiltersChange, 
   initialFilters 
 }) => {
+  const { userData } = useAuth();
+
+  // Determine allowed service types for contractors
+  let allowedServiceTypes = SERVICE_TYPES;
+  if (userData?.role === 'Contractor' && userData.contractorType) {
+    const allowedNames = contractorTypes[userData.contractorType] || [];
+    allowedServiceTypes = SERVICE_TYPES.filter(s => allowedNames.includes(s.name));
+  }
+
   // Initialize state with all items selected by default
   const [selectedNeighborhoods, setSelectedNeighborhoods] = useState<string[]>(
     initialFilters?.selectedNeighborhoods?.length ? initialFilters.selectedNeighborhoods : NEIGHBORHOODS.map(n => n.name)
   );
   const [selectedServiceTypes, setSelectedServiceTypes] = useState<string[]>(
-    initialFilters?.selectedServiceTypes?.length ? initialFilters.selectedServiceTypes : SERVICE_TYPES.map(s => s.name)
+    initialFilters?.selectedServiceTypes?.length ? initialFilters.selectedServiceTypes : allowedServiceTypes.map(s => s.name)
   );
 
   // Collapse states - only one can be open at a time
@@ -107,7 +119,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
 
   // Handle "Select All Service Types"
   const handleSelectAllServiceTypes = () => {
-    setSelectedServiceTypes(SERVICE_TYPES.map(s => s.name));
+    setSelectedServiceTypes(allowedServiceTypes.map(s => s.name));
   };
 
   // Apply filters
@@ -122,10 +134,10 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
   // Clear all filters (select all)
   const handleClearFilters = () => {
     setSelectedNeighborhoods(NEIGHBORHOODS.map(n => n.name));
-    setSelectedServiceTypes(SERVICE_TYPES.map(s => s.name));
+    setSelectedServiceTypes(allowedServiceTypes.map(s => s.name));
     const filters: FilterState = {
       selectedNeighborhoods: NEIGHBORHOODS.map(n => n.name),
-      selectedServiceTypes: SERVICE_TYPES.map(s => s.name),
+      selectedServiceTypes: allowedServiceTypes.map(s => s.name),
     };
     onFiltersChange(filters);
   };
@@ -210,7 +222,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
           {!isServiceTypesCollapsed && (
             <div className="service-types-scroll">
               <div className="service-type-buttons">
-                {SERVICE_TYPES.map(serviceType => {
+                {allowedServiceTypes.map(serviceType => {
                   const isSelected = selectedServiceTypes.includes(serviceType.name);
                   return (
                     <button

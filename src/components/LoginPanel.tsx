@@ -9,53 +9,57 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase'; 
-
-export type UserRole = 'User' | 'Admin';
-
-export interface UserData {
-    uid: string;
-    email: string;
-    role: UserRole;
-    displayName?: string;
-}
+import contractorTypes from '../constants/contractorTypes.json';
+import { UserRole } from '../types/user';
 
 interface LoginPanelProps {
     onClose: () => void;
     onLoginSuccess?: () => void;
 }
 
+// interface UserData {
+//     uid: string;
+//     email: string;
+//     role: UserRole;
+//     displayName?: string;
+//     contractorType?: string;
+// }
+
 const LoginPanel: React.FC<LoginPanelProps> = ({ onClose, onLoginSuccess }) => {
     const { user, userData, isAnonymous: _isAnonymous, signOut } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isRegistering, setIsRegistering] = useState(false);
-    const [selectedRole, setSelectedRole] = useState<UserRole>('User');
+    const [selectedRole, setSelectedRole] = useState<UserRole>('Subscriber');
+    const [selectedContractorType, setSelectedContractorType] = useState<string>('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     // const [message, setMessage] = useState<string | null>(null);
 
     const auth = getAuth();
+    const contractorTypeKeys = Object.keys(contractorTypes);
 
     // Fetches the user's role from the Firestore database.
     const getUserRole = async (uid: string): Promise<UserRole> => {
         try {
             const userDoc = await getDoc(doc(db, 'users', uid));
             if (userDoc.exists()) {
-                return userDoc.data().role || 'User';
+                return userDoc.data().role || 'Subscriber';
             }
-            return 'User'; // Default role
+            return 'Subscriber'; // Default role
         } catch (error) {
-            console.error('Error fetching user role:', error);
-            return 'User'; // Default role on error
+            console.error('[LoginPanel] Error fetching user role:', error);
+            return 'Subscriber'; // Default role on error
         }
     };
 
-    // Saves user data (email, role, timestamps) to Firestore.
-    const saveUserData = async (uid: string, email: string, role: UserRole) => {
+    // Saves user data (email, role, contractorType, timestamps) to Firestore.
+    const saveUserData = async (uid: string, email: string, role: UserRole, contractorType?: string) => {
         try {
             await setDoc(doc(db, 'users', uid), {
                 email,
                 role,
+                contractorType: role === 'Contractor' ? contractorType : undefined,
                 createdAt: new Date(),
                 lastLogin: new Date()
             });
@@ -68,26 +72,22 @@ const LoginPanel: React.FC<LoginPanelProps> = ({ onClose, onLoginSuccess }) => {
     // Handles the user login process with email and password.
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('Login handler called');
+        console.log('[LoginPanel] Login handler called');
         setLoading(true);
         setError('');
 
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
-            
             // Get user role from Firestore
             await getUserRole(user.uid);
-            
             // Update last login
             await setDoc(doc(db, 'users', user.uid), {
                 lastLogin: new Date()
             }, { merge: true });
-
-            // Delete unused userData variable comment
-
             if (onLoginSuccess) onLoginSuccess();
         } catch (error: any) {
+            console.error('[LoginPanel] Login error:', error);
             setError(error.message || 'Login failed');
         } finally {
             setLoading(false);
@@ -97,22 +97,18 @@ const LoginPanel: React.FC<LoginPanelProps> = ({ onClose, onLoginSuccess }) => {
     // Handles the user registration process.
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('Register handler called');
+        console.log('[LoginPanel] Register handler called');
         setLoading(true);
         setError('');
 
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
-            
-            // Save user data with selected role
-            await saveUserData(user.uid, user.email!, selectedRole);
-
-            // Delete unused userData variable comment
-
+            console.log('[LoginPanel] Firebase user after register:', user);
+            await saveUserData(user.uid, user.email!, selectedRole, selectedRole === 'Contractor' ? selectedContractorType : undefined);
             if (onLoginSuccess) onLoginSuccess();
-            // Do not close panel here
         } catch (error: any) {
+            console.error('[LoginPanel] Register error:', error);
             setError(error.message || 'Registration failed');
         } finally {
             setLoading(false);
@@ -143,6 +139,9 @@ const LoginPanel: React.FC<LoginPanelProps> = ({ onClose, onLoginSuccess }) => {
                     <div className="user-info-display">
                         <p><strong>Email:</strong> {displayEmail}</p>
                         <p><strong>Role:</strong> {displayRole}</p>
+                        {user && userData?.role === 'Contractor' && userData.contractorType && (
+                            <p><strong>Contractor Type:</strong> {userData.contractorType}</p>
+                        )}
                         <button onClick={handleLogout} className="logout-btn">Sign Out</button>
                     </div>
                 </div>
@@ -198,8 +197,26 @@ const LoginPanel: React.FC<LoginPanelProps> = ({ onClose, onLoginSuccess }) => {
                                 onChange={(e) => setSelectedRole(e.target.value as UserRole)}
                                 className="form-input"
                             >
-                                <option value="User">User</option>
+                                <option value="Subscriber">Subscriber</option>
+                                <option value="Contractor">Contractor</option>
                                 <option value="Admin">Admin</option>
+                            </select>
+                        </div>
+                    )}
+                    {isRegistering && selectedRole === 'Contractor' && (
+                        <div className="form-group">
+                            <label htmlFor="contractorType">Contractor Type</label>
+                            <select
+                                id="contractorType"
+                                value={selectedContractorType}
+                                onChange={(e) => setSelectedContractorType(e.target.value)}
+                                className="form-input"
+                                required
+                            >
+                                <option value="">Select Contractor Type</option>
+                                {contractorTypeKeys.map((type) => (
+                                    <option key={type} value={type}>{type}</option>
+                                ))}
                             </select>
                         </div>
                     )}

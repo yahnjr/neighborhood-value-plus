@@ -2,7 +2,15 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { User, onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
-import { UserRole, UserData } from '../components/LoginPanel';
+import { UserRole } from '../types/user';
+
+interface UserData {
+  uid: string;
+  email: string;
+  role: UserRole;
+  displayName?: string;
+  contractorType?: string; // Only for Contractor role
+}
 
 interface AuthContextType {
   user: User | null;
@@ -34,14 +42,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsAnonymous(firebaseUser?.isAnonymous || true);
 
       if (firebaseUser && !firebaseUser.isAnonymous) {
-        // Fetch user role from Firestore for signed-in users
+        // Fetch user role and contractorType from Firestore for signed-in users
         const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-        const role = userDoc.exists() ? (userDoc.data().role as UserRole) : 'User';
+        let role: UserRole = 'Subscriber';
+        let contractorType: string | undefined = undefined;
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          role = data.role as UserRole || 'Subscriber';
+          if (role === 'Contractor') {
+            contractorType = data.contractorType;
+          }
+        }
         setUserData({
           uid: firebaseUser.uid,
           email: firebaseUser.email || '',
           role,
           displayName: firebaseUser.displayName || undefined,
+          contractorType,
         });
       } else {
         // For anonymous users or no user, clear specific user data

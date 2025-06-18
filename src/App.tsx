@@ -4,6 +4,7 @@ import MapComponent from './components/MapComponent';
 import { FilterState } from './components/FilterPanel';
 import './App.css';
 import { AuthProvider } from './services/auth-context';
+import { useGeoJSONData } from "./hooks/useGeoJSONData";
 
 interface MapViewState {
   longitude: number;
@@ -18,6 +19,8 @@ interface SearchMarker {
 }
 
 function App() {
+  const geojson = useGeoJSONData();
+
   const [mapViewState, setMapViewState] = useState<MapViewState>({
     longitude: -122.5715,
     latitude: 45.498,
@@ -66,6 +69,16 @@ function App() {
     setFilters(newFilters);
   };
 
+  // Handler for adding a point and refreshing map data
+  const handleAddPointAndRefresh = async (point: any) => {
+    // Add the point to the layer (default 'addpoints')
+    await geojson.addPoint("addpoints", point);
+    // Refresh all layers so the map updates
+    await geojson.refreshAllLayers();
+    // Optionally clear add point coordinates
+    setAddPointCoordinates(null);
+  };
+
   const handlePointAdd = (coords: { lat: number; lng: number; neighborhood?: string | null; crossStreet?: string | null }) => {
     setAddPointCoordinates(coords);
     setIsAddingPoint(false); // Turn off adding mode after selecting a point
@@ -84,6 +97,7 @@ function App() {
           setIsAddingPoint={setIsAddingPoint}
           addPointCoordinates={addPointCoordinates === null ? undefined : addPointCoordinates}
           setAddPointCoordinates={setAddPointCoordinates}
+          onAddPoint={handleAddPointAndRefresh}
         />
         <MapComponent
           viewState={mapViewState}
@@ -93,6 +107,8 @@ function App() {
           isAddingPoint={isAddingPoint}
           onPointAdd={handlePointAdd}
           addPointCoordinates={addPointCoordinates === null ? undefined : addPointCoordinates}
+          geoJsonData={geojson.layers}
+          loadingGeoJson={geojson.loading}
         />
       </div>
     </AuthProvider>

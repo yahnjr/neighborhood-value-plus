@@ -1,5 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../services/auth-context';
+import contractorTypesJson from '../constants/contractorTypes.json';
+import { updateFeatureInLayer, GeoJSONFeature } from '../services/geojsonService';
+
+const contractorTypes: Record<string, string[]> = contractorTypesJson;
 
 interface PointPopupProps {
   jobType?: string;
@@ -10,6 +14,9 @@ interface PointPopupProps {
   estimate?: string;
   onClose: () => void;
   onEdit: () => void;
+  featureId?: string;
+  feature?: GeoJSONFeature;
+  onStatusUpdate?: (newStatus: string) => void;
 }
 
 const PointPopup: React.FC<PointPopupProps> = ({
@@ -20,10 +27,53 @@ const PointPopup: React.FC<PointPopupProps> = ({
   referralSource,
   estimate,
   onClose,
-  onEdit
+  onEdit,
+  // featureId,
+  feature,
+  onStatusUpdate
 }) => {
   const { userData } = useAuth();
   const isAdmin = userData?.role === 'Admin';
+  const isContractor = userData?.role === 'Contractor';
+  const allowedForContractor = isContractor && userData.contractorType && jobType && contractorTypes[userData.contractorType]?.includes(jobType);
+  const [statusValue, setStatusValue] = useState(status || '');
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    console.log('[PointPopup] feature on mount:', feature);
+    if (feature) {
+      console.log('[PointPopup] feature.id on mount:', feature.id);
+    }
+  }, [feature]);
+
+  const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setStatusValue(e.target.value);
+    setSaveError(null);
+  };
+
+  const handleSaveStatus = async () => {
+    if (!feature) return;
+    setSaving(true);
+    setSaveError(null);
+    // Ensure root id exists for update
+    let updatedFeature = { ...feature, properties: { ...feature.properties, Status: statusValue } };
+    // Use FID from the original feature, not the updated properties
+    if (!updatedFeature.id && feature.properties && (feature.properties as any).FID) {
+      updatedFeature.id = (feature.properties as any).FID;
+    }
+    console.log('[PointPopup] handleSaveStatus: feature:', updatedFeature);
+    console.log('[PointPopup] handleSaveStatus: feature.id:', updatedFeature.id);
+    try {
+      await updateFeatureInLayer('addpoints', updatedFeature);
+      if (onStatusUpdate) onStatusUpdate(statusValue);
+      setSaving(false);
+      onClose();
+    } catch (err: any) {
+      setSaveError('Failed to update status.');
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="point-popup">
@@ -58,15 +108,33 @@ const PointPopup: React.FC<PointPopupProps> = ({
           {/* Status */}
           <div>
             <div className="point-popup-label">Status</div>
-            <div
-              className="point-popup-status"
-              style={{
-                backgroundColor: getStatusColor(status).bg,
-                color: getStatusColor(status).text
-              }}
-            >
-              {status || 'Unknown'}
-            </div>
+            {allowedForContractor ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <select value={statusValue} onChange={handleStatusChange} className="point-popup-status-select">
+                  <option value="Active">Active</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Complete">Complete</option>
+                </select>
+                <button
+                  className="edit-button"
+                  style={{ minWidth: 80 }}
+                  onClick={handleSaveStatus}
+                  disabled={saving}
+                >
+                  {saving ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            ) : (
+              <div
+                className="point-popup-status"
+                style={{
+                  backgroundColor: getStatusColor(status).bg,
+                  color: getStatusColor(status).text
+                }}
+              >
+                {status || 'Unknown'}
+              </div>
+            )}
           </div>
         </div>
         {isAdmin && (
@@ -89,11 +157,16 @@ const PointPopup: React.FC<PointPopupProps> = ({
         )}
       </div>
       {/* Footer with Edit button */}
-      {isAdmin && (
+      {(isAdmin || allowedForContractor) && (
         <div className="point-popup-footer">
-          <button className="edit-button" onClick={onEdit}>
-            Edit
-          </button>
+          {isAdmin && (
+            <button className="edit-button" onClick={onEdit}>
+              Edit
+            </button>
+          )}
+          {allowedForContractor && saveError && (
+            <div style={{ color: 'red', marginTop: 8 }}>{saveError}</div>
+          )}
         </div>
       )}
     </div>

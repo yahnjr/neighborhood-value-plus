@@ -24,6 +24,7 @@ interface HeaderProps {
     setIsAddingPoint: (isAdding: boolean) => void;
     addPointCoordinates?: { lat: number; lng: number; neighborhood?: string | null; crossStreet?: string | null };
     setAddPointCoordinates: (coords: { lat: number; lng: number; neighborhood?: string | null; crossStreet?: string | null } | null) => void;
+    onAddPoint?: (point: any) => Promise<void>; // <-- add this
 }
 
 
@@ -36,7 +37,8 @@ const Header: React.FC<HeaderProps> = ({
     isAddingPoint, 
     setIsAddingPoint,
     addPointCoordinates,
-    setAddPointCoordinates
+    setAddPointCoordinates,
+    onAddPoint // <-- add this
 }) => {
     const [activePanel, setActivePanel] = useState<string | null>(null);
     const { user: _user, userData, isAnonymous: _isAnonymous, signOut: _signOut } = useAuth();
@@ -75,8 +77,12 @@ const Header: React.FC<HeaderProps> = ({
         setAddPointCoordinates(null);
     }
 
-    const handleAddPoint = (point: any) => {
-        console.log("New point to add:", point);
+    const handleAddPoint = async (point: any) => {
+        if (onAddPoint) {
+            await onAddPoint(point);
+        } else {
+            console.log("New point to add:", point);
+        }
     };
 
     const handleLocationSelect = (locationData: { longitude: number; latitude: number; zoom: number; address: string; }) => {

@@ -14,6 +14,9 @@ import { LayerProps } from 'react-map-gl';
 import hairconnect from '../assets/hairconnect.png';
 import bbox from '@turf/bbox';
 import type { Feature, Polygon, MultiPolygon } from 'geojson';
+import contractorTypesJson from '../constants/contractorTypes.json';
+
+const contractorTypes: Record<string, string[]> = contractorTypesJson;
 
 // GeoJSON types
 interface GeoJSONFeature {
@@ -54,6 +57,8 @@ interface MapComponentProps {
   isAddingPoint: boolean;
   onPointAdd: (coords: { lat: number; lng: number; neighborhood?: string | null; crossStreet?: string | null }) => void;
   addPointCoordinates?: { lat: number; lng: number; neighborhood?: string | null; crossStreet?: string | null };
+  geoJsonData: GeoJsonData; // <-- add this
+  loadingGeoJson: boolean; // <-- add this
 }
 
 const MapComponent: React.FC<MapComponentProps> = ({ 
@@ -63,7 +68,9 @@ const MapComponent: React.FC<MapComponentProps> = ({
   filters,
   isAddingPoint,
   onPointAdd,
-  addPointCoordinates
+  addPointCoordinates,
+  geoJsonData,
+  loadingGeoJson
 }) => {
   // Get authentication state
   const { user: _user, userData, isAnonymous, loading: authLoading } = useAuth();
@@ -77,8 +84,6 @@ const MapComponent: React.FC<MapComponentProps> = ({
 
   const currentViewState = externalViewState || internalViewState;
   
-  const [geoJsonData, setGeoJsonData] = useState<GeoJsonData>({});
-  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   const [showSponsorHighlight, setShowSponsorHighlight] = useState(true);
@@ -102,7 +107,6 @@ const MapComponent: React.FC<MapComponentProps> = ({
   useEffect(() => {
     const loadGeoJSONData = async () => {
       try {
-        setLoading(true);
         setError(null);
         
         console.log('Loading GeoJSON data...');
@@ -114,13 +118,11 @@ const MapComponent: React.FC<MapComponentProps> = ({
         // Delete commented out block for filtering layers
         
         console.log('Loaded and filtered layers:', Object.keys(layers));
-        setGeoJsonData(layers);
+        // Removed setGeoJsonData call - using prop instead
       } catch (err) {
         console.error('Error loading GeoJSON data:', err);
         setError(`Failed to load map data: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      } finally {
-        setLoading(false);
-      }
+      } 
     };
 
     // Only load data after auth state is determined
@@ -330,11 +332,11 @@ const MapComponent: React.FC<MapComponentProps> = ({
     setHoveredNeighborhood(null);
   };
 
-  // Filters map data based on selected neighborhoods and service types.
+  // Filters map data based on selected neighborhoods and service types and user role.
   const getFilteredData = () => {
     const filtered: GeoJsonData = { ...geoJsonData };
 
-    // Filter addpoints based on both neighborhood and service type
+    // Filter addpoints based on both neighborhood, service type, and user role
     if (filtered.addpoints) {
       let filteredFeatures = filtered.addpoints.features;
 
@@ -352,6 +354,15 @@ const MapComponent: React.FC<MapComponentProps> = ({
         filteredFeatures = filteredFeatures.filter(feature => {
           const serviceType = feature.properties?.["Service Ty"];
           return filters.selectedServiceTypes.includes(serviceType);
+        });
+      }
+
+      // Further restrict for contractors: only show allowed service types
+      if (userData?.role === 'Contractor' && userData.contractorType) {
+        const allowedNames = contractorTypes[userData.contractorType] || [];
+        filteredFeatures = filteredFeatures.filter(feature => {
+          const serviceType = feature.properties?.["Service Ty"];
+          return allowedNames.includes(serviceType);
         });
       }
 
@@ -382,7 +393,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
   const displayData = getFilteredData();
 
   // Show loading state while auth is loading or data is loading
-  if (authLoading || loading) {
+  if (authLoading || loadingGeoJson) {
     return (
       <div style={{ 
         height: '100vh', 
@@ -634,8 +645,10 @@ const MapComponent: React.FC<MapComponentProps> = ({
               fullAddress={selectedAddpoint.properties?.["Full Addre"]}
               referralSource={selectedAddpoint.properties?.["Referral S"]}
               estimate={selectedAddpoint.properties?.Estimate}
+              feature={selectedAddpoint}
               onClose={() => setSelectedAddpoint(null)}
               onEdit={() => handleEditPoint(selectedAddpoint)}
+              onStatusUpdate={() => { /* Optionally reload data here */ }}
             />
           );
         })()
