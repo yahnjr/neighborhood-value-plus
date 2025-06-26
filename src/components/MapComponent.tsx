@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Map, Source, Layer, NavigationControl, Marker } from 'react-map-gl';
 import * as turf from '@turf/turf';
-import { fetchAllGeoJSONLayers } from '../services/geojsonService';
+import { fetchAllGeoJSONLayers, saveGeoJSONLayer } from '../services/geojsonService';
 import { useAuth } from '../services/auth-context';
 import SponsorPopup from './SponsorPopup';
 import PointPopup from './PointPopup';
@@ -11,10 +11,11 @@ import { FilterState } from './FilterPanel';
 import layerStyles from '../constants/layerStyles.json';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { LayerProps } from 'react-map-gl';
-import hairconnect from '../assets/hairconnect.png';
 import bbox from '@turf/bbox';
 import type { Feature, Polygon, MultiPolygon } from 'geojson';
 import contractorTypesJson from '../constants/contractorTypes.json';
+import { storage } from '../services/firebase';
+import { getDownloadURL, ref as storageRef } from 'firebase/storage';
 
 const contractorTypes: Record<string, string[]> = contractorTypesJson;
 
@@ -104,6 +105,9 @@ const MapComponent: React.FC<MapComponentProps> = ({
     y: number;
   } | null>(null);
 
+  // State for sponsor logo
+  const [sponsorLogoUrl, setSponsorLogoUrl] = useState<string | null>(null);
+
   useEffect(() => {
     const loadGeoJSONData = async () => {
       try {
@@ -133,17 +137,39 @@ const MapComponent: React.FC<MapComponentProps> = ({
 
   useEffect(() => {
     if (geoJsonData.Sponsors) {
+      // Find the sponsor with Featured === 'Y'
       const sponsorFeature = geoJsonData.Sponsors.features.find(
-        f => f.properties?.Name === 'The Hair Connect'
+        f => f.properties?.Featured === 'Y'
       );
       if (sponsorFeature) {
-        console.log('Sponsor feature found:', sponsorFeature);
+        console.log('Featured sponsor found:', sponsorFeature);
         setHighlightedSponsor(sponsorFeature);
       } else {
-        console.log('Sponsor feature not found');
+        console.log('No featured sponsor found');
+        setHighlightedSponsor(null);
       }
     }
   }, [geoJsonData.Sponsors]);
+
+  // Fetch sponsor logo from Firebase Storage when highlightedSponsor changes
+  useEffect(() => {
+    const fetchSponsorLogo = async () => {
+      if (highlightedSponsor && highlightedSponsor.properties?.Image) {
+        try {
+          const imageName = highlightedSponsor.properties.Image;
+          const logoRef = storageRef(storage, `sponsor-logos/${imageName}`);
+          const url = await getDownloadURL(logoRef);
+          setSponsorLogoUrl(url);
+        } catch (err) {
+          console.error('Error fetching sponsor logo:', err);
+          setSponsorLogoUrl(null);
+        }
+      } else {
+        setSponsorLogoUrl(null);
+      }
+    };
+    fetchSponsorLogo();
+  }, [highlightedSponsor]);
 
   const handleMove = (evt: any) => {
     if (onViewStateChange) {
@@ -448,6 +474,29 @@ const MapComponent: React.FC<MapComponentProps> = ({
     );
   }
 
+  // Admin: Set featured sponsor
+  const handleSetFeaturedSponsor = async (featureId: string) => {
+    if (!geoJsonData.Sponsors) return;
+    const updatedFeatures = geoJsonData.Sponsors.features.map(f => {
+      // Use FID, OBJECTID, or Name as the unique identifier for matching
+      const fId = f.properties?.FID?.toString() || f.properties?.OBJECTID?.toString() || f.properties?.Name;
+      return {
+        ...f,
+        properties: {
+          ...f.properties,
+          Featured: (fId === featureId) ? 'Y' : 'N',
+        },
+      };
+    });
+    const updatedSponsors = {
+      ...geoJsonData.Sponsors,
+      features: updatedFeatures,
+    };
+    await saveGeoJSONLayer('Sponsors', updatedSponsors);
+    // Optionally, reload data or update state here
+    setHighlightedSponsor(updatedFeatures.find(f => f.properties.Featured === 'Y') || null);
+  };
+
   return (
     <div style={{ height: '100vh', width: '100%', position: 'relative' }}>
       {/* Debug info - remove in production */}
@@ -571,7 +620,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
         )}
 
         {/* Sponsor Marker + Popup */}
-        {showSponsorHighlight && highlightedSponsor && highlightedSponsor.geometry.type === 'Point' && (
+        {showSponsorHighlight && highlightedSponsor && highlightedSponsor.geometry.type === 'Point' && sponsorLogoUrl && (
           <Marker
             longitude={highlightedSponsor.geometry.coordinates[0]}
             latitude={highlightedSponsor.geometry.coordinates[1]}
@@ -579,7 +628,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
           >
             <div className="sponsor-marker-container">
               <img
-                src={hairconnect}
+                src={sponsorLogoUrl}
                 alt="Sponsor Logo"
                 className="sponsor-marker-img"
               />
@@ -611,7 +660,13 @@ const MapComponent: React.FC<MapComponentProps> = ({
               name={highlightedSponsor.properties?.Name}
               crossStreet={highlightedSponsor.properties?.CrossStreet}
               instagram={highlightedSponsor.properties?.Instagram}
+              logoUrl={sponsorLogoUrl}
               onClose={() => setShowSponsorHighlight(false)}
+              isAdmin={userData?.role === 'Admin'}
+              sponsors={geoJsonData.Sponsors?.features || []}
+              currentFeaturedId={highlightedSponsor?.properties?.OBJECTID?.toString() || highlightedSponsor?.properties?.Name || null}
+              onSetFeatured={handleSetFeaturedSponsor}
+              loading={loadingGeoJson}
             />
           </div>
         )}
@@ -629,8 +684,6 @@ const MapComponent: React.FC<MapComponentProps> = ({
         <NeighborhoodHoverPopup
           neighborhoodName={hoveredNeighborhood.name}
           pointCount={hoveredNeighborhood.pointCount}
-          x={hoveredNeighborhood.x}
-          y={hoveredNeighborhood.y}
         />
       )}
 

@@ -27,19 +27,35 @@ interface FilterPanelProps {
   initialFilters?: FilterState;
 }
 
-// Define our neighborhoods
+// Define neighborhoods
 const NEIGHBORHOODS: Neighborhood[] = [
-  { id: 'powellhurst-gilbert', name: 'Powellhurst-Gilbert' },
-  { id: 'lents', name: 'Lents' },
-  { id: 'foster-powell', name: 'Foster-Powell' },
-  { id: 'mt-scott-arleta', name: 'Mt. Scott-Arleta' },
   { id: 'brentwood-darlington', name: 'Brentwood-Darlington' },
-  { id: 'woodstock', name: 'Woodstock' },
-  { id: 'gilbert', name: 'Gilbert' },
-  { id: 'pleasant-valley', name: 'Pleasant Valley' },
   { id: 'centennial', name: 'Centennial' },
+  { id: 'centennial-pleasant-valley', name: 'Centennial/Pleasant-Valley' },
+  { id: 'creston-kenilworth', name: 'Creston-Kenilworth' },
+  { id: 'eastmoreland', name: 'Eastmoreland' },
+  { id: 'eastmoreland-reed', name: 'Eastmoreland/Reed' },
+  { id: 'foster-powell', name: 'Foster-Powell' },
+  { id: 'gilbert', name: 'Gilbert' },
+  { id: 'glenfair', name: 'Glenfair' },
+  { id: 'hazelwood', name: 'Hazelwood' },
+  { id: 'hazelwood-mill-park', name: 'Hazelwood/Mill Park' },
+  { id: 'laurelhurst', name: 'Laurelhurst' },
+  { id: 'lents', name: 'Lents' },
+  { id: 'lents-powellhurst-gilbert', name: 'Lents/Powellhurst-Gilbert' },
   { id: 'mill-park', name: 'Mill Park' },
+  { id: 'montavilla', name: 'Montavilla' },
+  { id: 'mt-scott-arleta', name: 'Mt. Scott-Arleta' },
+  { id: 'mt-tabor', name: 'Mt. Tabor' },
+  { id: 'north-tabor', name: 'North Tabor' },
+  { id: 'pleasant-valley', name: 'Pleasant Valley' },
+  { id: 'pleasant-valley-powellhurst-gilbert', name: 'Pleasant Valley/Powellhurst-Gilbert' },
+  { id: 'powellhurst-gilbert', name: 'Powellhurst-Gilbert' },
+  { id: 'reed', name: 'Reed' },
+  { id: 'richmond', name: 'Richmond' },
   { id: 'south-tabor', name: 'South Tabor' },
+  { id: 'sunnyside', name: 'Sunnyside' },
+  { id: 'woodstock', name: 'Woodstock' },
 ];
 
 const FilterPanel: React.FC<FilterPanelProps> = ({ 

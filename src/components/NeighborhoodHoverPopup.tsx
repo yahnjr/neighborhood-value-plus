@@ -3,22 +3,22 @@ import React from 'react';
 interface NeighborhoodHoverPopupProps {
   neighborhoodName: string;
   pointCount: number;
-  x: number; 
-  y: number; 
 }
 
 const NeighborhoodHoverPopup: React.FC<NeighborhoodHoverPopupProps> = ({
   neighborhoodName,
-  pointCount,
-  x,
-  y
+  pointCount
 }) => {
   return (
     <div
       className="neighborhood-hover-popup"
       style={{
-        left: x + 1,
-        top: y + 1
+        position: 'fixed',
+        top: 134,
+        left: 24,
+        zIndex: 1001,
+        pointerEvents: 'none',
+        maxWidth: 320
       }}
     >
       <div className="neighborhood-hover-popup-row">
