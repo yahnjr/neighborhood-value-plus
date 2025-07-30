@@ -82,6 +82,8 @@ const fetchServicePoints = async () => {
   }
 };
 
+console.log(fetchServicePoints());
+
 const MapComponent: React.FC<MapComponentProps> = ({ 
   viewState: externalViewState, 
   onViewStateChange,
