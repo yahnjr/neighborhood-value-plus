@@ -5,6 +5,7 @@ import { FilterState } from './components/FilterPanel';
 import './App.css';
 import { AuthProvider } from './services/auth-context';
 import { useGeoJSONData } from "./hooks/useGeoJSONData";
+import './config/env'; 
 
 interface MapViewState {
   longitude: number;
@@ -19,26 +20,6 @@ interface SearchMarker {
 }
 
 function App() {
-  // Debug environment variables
-  console.log('Environment Variables Debug:');
-  console.log({
-    firebase: {
-      apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-      authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-      projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-      storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-      messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-      appId: import.meta.env.VITE_FIREBASE_APP_ID
-    },
-    supabase: {
-      url: import.meta.env.VITE_SUPABASE_URL,
-      anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY?.slice(0, 8) + '...' // Only show first 8 chars for security
-    },
-    mapbox: {
-      token: import.meta.env.VITE_MAPBOX_ACCESS_TOKEN?.slice(0, 8) + '...' // Only show first 8 chars for security
-    }
-  });
-
   const geojson = useGeoJSONData();
 
   const [mapViewState, setMapViewState] = useState<MapViewState>({
