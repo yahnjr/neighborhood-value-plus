@@ -36,8 +36,6 @@ export const fetchGeoJSONLayer = async (layerName: string): Promise<GeoJSON> => 
       console.log(`Using cached data for ${layerName}`);
       return geoJSONCache[layerName];
     }
-
-    console.log(`Fetching ${layerName}...`);
    
     // Try different possible paths for the files
     const possiblePaths = [
@@ -54,7 +52,6 @@ export const fetchGeoJSONLayer = async (layerName: string): Promise<GeoJSON> => 
       try {
         const fileRef = ref(storage, path);
         downloadURL = await getDownloadURL(fileRef);
-        console.log(`Found ${layerName} at path: ${path}`);
         break;
       } catch (error) {
         console.log(`File not found at path: ${path}`);
@@ -74,7 +71,6 @@ export const fetchGeoJSONLayer = async (layerName: string): Promise<GeoJSON> => 
     }
    
     const geoJsonData: GeoJSON = await response.json();
-    console.log(`Successfully loaded ${layerName}:`, geoJsonData);
    
     // Cache the data
     geoJSONCache[layerName] = geoJsonData;

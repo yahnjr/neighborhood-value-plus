@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Map, Source, Layer, NavigationControl, Marker } from 'react-map-gl';
 import * as turf from '@turf/turf';
 import { fetchAllGeoJSONLayers, saveGeoJSONLayer } from '../services/geojsonService';
 import { useAuth } from '../services/auth-context';
+import supabase from '../services/supabase.ts';
 import SponsorPopup from './SponsorPopup';
 import PointPopup from './PointPopup';
 import EditPointPanel from './EditPointPanel';
@@ -58,9 +59,28 @@ interface MapComponentProps {
   isAddingPoint: boolean;
   onPointAdd: (coords: { lat: number; lng: number; neighborhood?: string | null; crossStreet?: string | null }) => void;
   addPointCoordinates?: { lat: number; lng: number; neighborhood?: string | null; crossStreet?: string | null };
-  geoJsonData: GeoJsonData; // <-- add this
-  loadingGeoJson: boolean; // <-- add this
+  geoJsonData: GeoJsonData;
+  loadingGeoJson: boolean;
 }
+
+// Test function to fetch data from Supabase
+const fetchServicePoints = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('servicePoints')
+      .select('*');
+    
+    if (error) {
+      console.error('Error fetching service points:', error);
+      return;
+    }
+    
+    console.log('Service points data:', data);
+    return data;
+  } catch (error) {
+    console.error('Error in fetchServicePoints:', error);
+  }
+};
 
 const MapComponent: React.FC<MapComponentProps> = ({ 
   viewState: externalViewState, 
@@ -107,6 +127,40 @@ const MapComponent: React.FC<MapComponentProps> = ({
 
   // State for sponsor logo
   const [sponsorLogoUrl, setSponsorLogoUrl] = useState<string | null>(null);
+
+  // Test Supabase connection
+  useEffect(() => {
+    const testSupabase = async () => {
+      try {
+        // // First, let's check what tables are available
+        // const { data: tables, error: tablesError } = await supabase
+        //   .from('_tables')
+        //   .select('*');
+
+        // if (tablesError) {
+        //   console.log('Error fetching tables:', tablesError);
+        // } else {
+        //   console.log('Available tables:', tables);
+        // }
+
+        // Then try to fetch from service_points (common naming convention)
+        const { data, error } = await supabase
+          .from('servicepoints')  // Try with underscores instead of camelCase
+          .select('*');
+        
+        if (error) {
+          console.error('Error fetching service points:', error);
+          return;
+        }
+        
+        console.log('Connection to Supabase successful! Service points data:', data);
+      } catch (error) {
+        console.error('Error in Supabase test:', error);
+      }
+    };
+
+    testSupabase();
+  }, []);
 
   useEffect(() => {
     const loadGeoJSONData = async () => {
