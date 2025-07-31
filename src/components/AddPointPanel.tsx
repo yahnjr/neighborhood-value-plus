@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
 import { faChevronDown } from '@fortawesome/free-solid-svg-icons';
 import { SERVICE_TYPES, ServiceType } from '../constants/serviceTypes';
-import { addFeatureToLayer, GeoJSONFeature } from '../services/geojsonService';
+import { addFeatureToLayer, GeoJSONFeature } from '../services/supabaseService';
 
 interface AddPointPanelProps {
     onClose: () => void;

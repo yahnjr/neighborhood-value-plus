@@ -72,8 +72,8 @@ function App() {
 
   // Handler for adding a point and refreshing map data
   const handleAddPointAndRefresh = async (point: any) => {
-    // Add the point to the layer (default 'addpoints')
-    await geojson.addPoint("addpoints", point);
+    // Add the point to the servicePoints layer
+    await geojson.addPoint("servicePoints", point);
     // Refresh all layers so the map updates
     await geojson.refreshAllLayers();
     // Optionally clear add point coordinates

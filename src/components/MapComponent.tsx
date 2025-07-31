@@ -1,22 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Map, Source, Layer, NavigationControl, Marker } from 'react-map-gl';
 import * as turf from '@turf/turf';
-import { fetchAllGeoJSONLayers, saveGeoJSONLayer } from '../services/geojsonService';
+import { fetchAllGeoJSONLayers, getSponsorLogoUrl, updateFeatureInLayer } from '../services/supabaseService';
 import { useAuth } from '../services/auth-context';
-import supabase from '../services/supabase.ts';
 import SponsorPopup from './SponsorPopup';
 import PointPopup from './PointPopup';
 import EditPointPanel from './EditPointPanel';
-import NeighborhoodHoverPopup from './NeighborhoodHoverPopup'; 
 import { FilterState } from './FilterPanel';
 import layerStyles from '../constants/layerStyles.json';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { LayerProps } from 'react-map-gl';
-import bbox from '@turf/bbox';
 import type { Feature, Polygon, MultiPolygon } from 'geojson';
 import contractorTypesJson from '../constants/contractorTypes.json';
-import { storage } from '../services/firebase';
-import { getDownloadURL, ref as storageRef } from 'firebase/storage';
 
 const contractorTypes: Record<string, string[]> = contractorTypesJson;
 
@@ -63,26 +58,7 @@ interface MapComponentProps {
   loadingGeoJson: boolean;
 }
 
-// Test function to fetch data from Supabase
-const fetchServicePoints = async () => {
-  try {
-    const { data, error } = await supabase
-      .from('servicePoints')
-      .select('*');
-    
-    if (error) {
-      console.error('Error fetching service points:', error);
-      return;
-    }
-    
-    console.log('Service points data:', data);
-    return data;
-  } catch (error) {
-    console.error('Error in fetchServicePoints:', error);
-  }
-};
-
-console.log(fetchServicePoints());
+// No test function needed
 
 const MapComponent: React.FC<MapComponentProps> = ({ 
   viewState: externalViewState, 
@@ -96,7 +72,10 @@ const MapComponent: React.FC<MapComponentProps> = ({
   loadingGeoJson
 }) => {
   // Get authentication state
-  const { user: _user, userData, isAnonymous, loading: authLoading } = useAuth();
+  const { user: _user, userData, loading: authLoading } = useAuth();
+  
+  // State for neighborhood selection
+  const [selectedNeighborhood, setSelectedNeighborhood] = useState<string | null>(null);
   
   // Use external viewState if provided, otherwise use internal state
   const [internalViewState, setInternalViewState] = useState({
@@ -116,52 +95,23 @@ const MapComponent: React.FC<MapComponentProps> = ({
   const [selectedAddpoint, setSelectedAddpoint] = useState<GeoJSONFeature | null>(null);
   const [editingAddpoint, setEditingAddpoint] = useState<GeoJSONFeature | null>(null);
 
-  // State for neighborhood selection
-  const [selectedNeighborhood, setSelectedNeighborhood] = useState<string | null>(null);
-
-  // State for neighborhood hover
-  const [hoveredNeighborhood, setHoveredNeighborhood] = useState<{
-    name: string;
-    pointCount: number;
-    x: number;
-    y: number;
-  } | null>(null);
-
   // State for sponsor logo
   const [sponsorLogoUrl, setSponsorLogoUrl] = useState<string | null>(null);
 
-  // Test Supabase connection
+  // Initial map setup
   useEffect(() => {
-    const testSupabase = async () => {
-      try {
-        // // First, let's check what tables are available
-        // const { data: tables, error: tablesError } = await supabase
-        //   .from('_tables')
-        //   .select('*');
-
-        // if (tablesError) {
-        //   console.log('Error fetching tables:', tablesError);
-        // } else {
-        //   console.log('Available tables:', tables);
-        // }
-
-        // Then try to fetch from service_points (common naming convention)
-        const { data, error } = await supabase
-          .from('servicepoints')  // Try with underscores instead of camelCase
-          .select('*');
-        
-        if (error) {
-          console.error('Error fetching service points:', error);
-          return;
-        }
-        
-        console.log('Connection to Supabase successful! Service points data:', data);
-      } catch (error) {
-        console.error('Error in Supabase test:', error);
-      }
+    // Set initial view to Lents neighborhood
+    const lentsView = {
+      longitude: -122.5715, // Update these coordinates to center of Lents
+      latitude: 45.4814,
+      zoom: 13
     };
-
-    testSupabase();
+    
+    if (onViewStateChange) {
+      onViewStateChange(lentsView);
+    } else {
+      setInternalViewState(lentsView);
+    }
   }, []);
 
   useEffect(() => {
@@ -170,8 +120,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
         setError(null);
         
         console.log('Loading GeoJSON data...');
-        const role = !isAnonymous && userData ? userData.role : null;
-        console.log('Current user role:', role || 'Guest');
+        console.log('Current user role:', userData?.role || 'Guest');
         
         const layers = await fetchAllGeoJSONLayers();
         
@@ -189,7 +138,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
     if (!authLoading) {
       loadGeoJSONData();
     }
-  }, [isAnonymous, userData, authLoading]); // Reload when auth state changes
+  }, [userData, authLoading]); // Reload when auth state changes
 
   useEffect(() => {
     if (geoJsonData.Sponsors) {
@@ -207,14 +156,13 @@ const MapComponent: React.FC<MapComponentProps> = ({
     }
   }, [geoJsonData.Sponsors]);
 
-  // Fetch sponsor logo from Firebase Storage when highlightedSponsor changes
+  // Fetch sponsor logo from Supabase Storage when highlightedSponsor changes
   useEffect(() => {
     const fetchSponsorLogo = async () => {
       if (highlightedSponsor && highlightedSponsor.properties?.Image) {
         try {
           const imageName = highlightedSponsor.properties.Image;
-          const logoRef = storageRef(storage, `sponsor-logos/${imageName}`);
-          const url = await getDownloadURL(logoRef);
+          const url = await getSponsorLogoUrl(imageName);
           setSponsorLogoUrl(url);
         } catch (err) {
           console.error('Error fetching sponsor logo:', err);
@@ -239,18 +187,9 @@ const MapComponent: React.FC<MapComponentProps> = ({
     }
   };
 
-  // Counts the number of service points within a given neighborhood.
-  const countPointsInNeighborhood = (neighborhoodName: string): number => {
-    if (!geoJsonData.addpoints) return 0;
-    
-    return geoJsonData.addpoints.features.filter(feature => {
-      const pointNeighborhood = feature.properties?.neighbhood;
-      return pointNeighborhood === neighborhoodName;
-    }).length;
-  };
-
   // Utility function to check if a point is inside a polygon
-  const getNeighborhoodFromCoordinates = (
+  // @ts-ignore - This function will be used in future functionality
+  const _getNeighborhoodFromCoordinates = (
     lng: number, 
     lat: number, 
     neighborhoodBoundaries: GeoJSON
@@ -278,51 +217,10 @@ const MapComponent: React.FC<MapComponentProps> = ({
   const handleMapClick = (event: any) => {
     if (isAddingPoint) {
       const { lng, lat } = event.lngLat;
-
       const roundedLng = Math.round(lng * 10000) / 10000;
       const roundedLat = Math.round(lat * 10000) / 10000;
-
-      let neighborhood: string | null = null;
-      if (geoJsonData.NeighborhoodBoundaries) {
-        neighborhood = getNeighborhoodFromCoordinates(
-          roundedLng,
-          roundedLat,
-          geoJsonData.NeighborhoodBoundaries
-        )
-      }
-
-      let crossStreet: string | null = null;
-      if (geoJsonData.PortlandStreets) {
-        const point = turf.point([roundedLng, roundedLat]);
-        const streets = geoJsonData.PortlandStreets.features;
-        let streetsWithDistances: { street: any; distance: number }[] = [];
-
-        streets.forEach(street => {
-          if (street.geometry.type === 'LineString') {
-            const distance = turf.pointToLineDistance(point, street as Feature<any>);
-            streetsWithDistances.push({ street, distance });
-          } else if (street.geometry.type === 'MultiLineString') {
-            // For each LineString in the MultiLineString, treat as a separate street segment
-            street.geometry.coordinates.forEach((coords: any) => {
-              const singleLine = turf.lineString(coords, street.properties);
-              const distance = turf.pointToLineDistance(point, singleLine as Feature<any>);
-              // Attach the parent street's properties for name lookup
-              streetsWithDistances.push({ street: { ...street, geometry: { type: 'LineString', coordinates: coords } }, distance });
-            });
-          }
-        });
-
-        streetsWithDistances.sort((a, b) => a.distance - b.distance);
-
-        if (streetsWithDistances.length >= 2) {
-          const street1 = streetsWithDistances[0].street.properties?.FullName;
-          const street2 = streetsWithDistances[1].street.properties?.FullName;
-          crossStreet = `${street1} & ${street2}`;
-        }
-      }
-
-      onPointAdd({ lat: roundedLat, lng: roundedLng, neighborhood, crossStreet });
-
+      
+      onPointAdd({ lat: roundedLat, lng: roundedLng });
       return;
     }
 
@@ -334,27 +232,6 @@ const MapComponent: React.FC<MapComponentProps> = ({
         console.log('Clicked addpoint:', addpointFeature);
         setSelectedAddpoint(addpointFeature);
         return;
-      }
-
-      // Check if a neighborhood was clicked
-      const neighborhoodFeature = features.find((f: any) => f.source === 'neighborhoods');
-      if (neighborhoodFeature) {
-        const neighborhoodName = neighborhoodFeature.properties?.MAPLABEL || neighborhoodFeature.properties?.NAME;
-        if (neighborhoodName) {
-          setSelectedNeighborhood(neighborhoodName);
-          const [minLng, minLat, maxLng, maxLat] = bbox(neighborhoodFeature.geometry);
-          const newViewState = {
-            ...currentViewState,
-            longitude: (minLng + maxLng) / 2,
-            latitude: (minLat + maxLat) / 2,
-            zoom: 14,
-          };
-          if (onViewStateChange) {
-            onViewStateChange(newViewState);
-          } else {
-            setInternalViewState(newViewState);
-          }
-        }
       }
     }
   };
@@ -374,44 +251,6 @@ const MapComponent: React.FC<MapComponentProps> = ({
     console.log("Delete point:", pointId);
     // Here you would typically call a service to delete the data in Firebase/backend
     setEditingAddpoint(null);
-  };
-
-  // Shows a popup with neighborhood info on hover.
-  const handleMouseMove = (event: any) => {
-    const features = event.features;
-    if (features && features.length > 0) {
-      // Look for neighborhood boundary feature
-      const neighborhoodFeature = features.find((f: any) => f.source === 'neighborhoods');
-      if (neighborhoodFeature) {
-        const neighborhoodName = neighborhoodFeature.properties?.MAPLABEL || neighborhoodFeature.properties?.NAME;
-        if (neighborhoodName) {
-          const pointCount = countPointsInNeighborhood(neighborhoodName);
-          setHoveredNeighborhood({
-            name: neighborhoodName,
-            pointCount,
-            x: event.point.x,
-            y: event.point.y
-          });
-        }
-      } else {
-        // Not hovering over a neighborhood, clear the hover state
-        setHoveredNeighborhood(null);
-      }
-    } else {
-      setHoveredNeighborhood(null);
-    }
-  };
-
-  // Changes the cursor to a pointer when hovering over interactive map elements.
-  const handleMouseEnter = () => {
-    if (currentViewState) {
-      // Change cursor to pointer when hovering over interactive elements
-    }
-  };
-
-  const handleMouseLeave = () => {
-    // Reset cursor and clear hover state
-    setHoveredNeighborhood(null);
   };
 
   // Filters map data based on selected neighborhoods and service types and user role.
@@ -434,16 +273,16 @@ const MapComponent: React.FC<MapComponentProps> = ({
       // Apply service type filter (use 'Service Ty' property only)
       if (filters.selectedServiceTypes.length > 0) {
         filteredFeatures = filteredFeatures.filter(feature => {
-          const serviceType = feature.properties?.["Service Ty"];
+          const serviceType = feature.properties?.["Service_Ty"];
           return filters.selectedServiceTypes.includes(serviceType);
         });
       }
 
       // Further restrict for contractors: only show allowed service types
-      if (userData?.role === 'Contractor' && userData.contractorType) {
+      if (userData?.role === 'contractor' && userData.contractorType) {
         const allowedNames = contractorTypes[userData.contractorType] || [];
         filteredFeatures = filteredFeatures.filter(feature => {
-          const serviceType = feature.properties?.["Service Ty"];
+          const serviceType = feature.properties?.["Service_Ty"];
           return allowedNames.includes(serviceType);
         });
       }
@@ -489,7 +328,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
           {authLoading ? 'Initializing...' : 'Loading map data...'}
           <br />
           <small style={{ color: '#666', marginTop: '8px' }}>
-            {isAnonymous ? 'Loading as guest' : `Logged in as ${userData?.role}`}
+            {userData ? `Logged in as ${userData.role}` : 'Loading as guest'}
           </small>
         </div>
       </div>
@@ -533,30 +372,43 @@ const MapComponent: React.FC<MapComponentProps> = ({
   // Admin: Set featured sponsor
   const handleSetFeaturedSponsor = async (featureId: string) => {
     if (!geoJsonData.Sponsors) return;
-    const updatedFeatures = geoJsonData.Sponsors.features.map(f => {
-      // Use FID, OBJECTID, or Name as the unique identifier for matching
+    
+    // First, update all sponsors to not be featured
+    for (const feature of geoJsonData.Sponsors.features) {
+      if (feature.properties.Featured === 'Y') {
+        await updateFeatureInLayer('Sponsors', {
+          ...feature,
+          properties: {
+            ...feature.properties,
+            Featured: 'N'
+          }
+        });
+      }
+    }
+
+    // Then, set the selected sponsor as featured
+    const sponsorToUpdate = geoJsonData.Sponsors.features.find(f => {
       const fId = f.properties?.FID?.toString() || f.properties?.OBJECTID?.toString() || f.properties?.Name;
-      return {
-        ...f,
-        properties: {
-          ...f.properties,
-          Featured: (fId === featureId) ? 'Y' : 'N',
-        },
-      };
+      return fId === featureId;
     });
-    const updatedSponsors = {
-      ...geoJsonData.Sponsors,
-      features: updatedFeatures,
-    };
-    await saveGeoJSONLayer('Sponsors', updatedSponsors);
-    // Optionally, reload data or update state here
-    setHighlightedSponsor(updatedFeatures.find(f => f.properties.Featured === 'Y') || null);
+
+    if (sponsorToUpdate) {
+      const updatedSponsor = {
+        ...sponsorToUpdate,
+        properties: {
+          ...sponsorToUpdate.properties,
+          Featured: 'Y'
+        }
+      };
+      await updateFeatureInLayer('Sponsors', updatedSponsor);
+      setHighlightedSponsor(updatedSponsor);
+    }
   };
 
   return (
     <div style={{ height: '100vh', width: '100%', position: 'relative' }}>
       {/* Debug info - remove in production */}
-      {!isAnonymous && userData && (
+      {userData && (
         <div style={{
           position: 'absolute',
           top: '10px',
@@ -576,9 +428,6 @@ const MapComponent: React.FC<MapComponentProps> = ({
         {...currentViewState}
         onMove={handleMove}
         onClick={handleMapClick}
-        onMouseMove={handleMouseMove}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
         interactiveLayerIds={['addpoints', 'neighborhoods-fill']}
         mapboxAccessToken={import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}
         style={{ width: '100%', height: '100%' }}
@@ -718,7 +567,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
               instagram={highlightedSponsor.properties?.Instagram}
               logoUrl={sponsorLogoUrl}
               onClose={() => setShowSponsorHighlight(false)}
-              isAdmin={userData?.role === 'Admin'}
+              isAdmin={userData?.role === 'admin'}
               sponsors={geoJsonData.Sponsors?.features || []}
               currentFeaturedId={highlightedSponsor?.properties?.OBJECTID?.toString() || highlightedSponsor?.properties?.Name || null}
               onSetFeatured={handleSetFeaturedSponsor}
@@ -735,24 +584,16 @@ const MapComponent: React.FC<MapComponentProps> = ({
         )}
       </Map>
 
-      {/* Neighborhood Hover Popup */}
-      {hoveredNeighborhood && (
-        <NeighborhoodHoverPopup
-          neighborhoodName={hoveredNeighborhood.name}
-          pointCount={hoveredNeighborhood.pointCount}
-        />
-      )}
-
       {/* Addpoint Popup */}
       {selectedAddpoint && (
         (() => {
           return (
             <PointPopup
-              jobType={selectedAddpoint.properties?.["Service Ty"]}
-              location={selectedAddpoint.properties?.["Cross Stre"]}
+              jobType={selectedAddpoint.properties?.["Service_Ty"]}
+              location={selectedAddpoint.properties?.["Cross_Stre"]}
               status={selectedAddpoint.properties?.Status}
-              fullAddress={selectedAddpoint.properties?.["Full Addre"]}
-              referralSource={selectedAddpoint.properties?.["Referral S"]}
+              fullAddress={selectedAddpoint.properties?.["Full_Addre"]}
+              referralSource={selectedAddpoint.properties?.["Referral_S"]}
               estimate={selectedAddpoint.properties?.Estimate}
               feature={selectedAddpoint}
               onClose={() => setSelectedAddpoint(null)}

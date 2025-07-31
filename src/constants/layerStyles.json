@@ -19,7 +19,7 @@
           10, "#577590",
           "#CCCCCC"
       ],
-      "fill-opacity": 0.3,
+      "fill-opacity": 0.1,
       "fill-outline-color": "#FFFFFF"
     }
   },
@@ -48,7 +48,7 @@
     "paint": {
       "circle-color": [
         "match",
-        ["get", "Service Ty"],
+        ["get", "Service_Ty"],
           "Lawn Restoration", "#008000",      
           "Sidewalk Repair", "#808080",          
           "Homeless Outreach", "#FFA500",       

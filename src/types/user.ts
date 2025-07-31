@@ -1,8 +1,11 @@
-export type UserRole = 'Subscriber' | 'Contractor' | 'Admin';
+export type UserRole = 'user' | 'contractor' | 'admin';
 
 export interface User {
   id: string;
   email: string;
   role: UserRole;
-  contractorType?: string; // Only for Contractor role
+  displayName?: string;
+  contractorType?: string; // Only for contractor role
+  createdAt?: string;
+  updatedAt?: string;
 }

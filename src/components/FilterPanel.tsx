@@ -7,8 +7,6 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { SERVICE_TYPES } from '../constants/serviceTypes';
 import { useAuth } from '../services/auth-context';
-import contractorTypesJson from '../constants/contractorTypes.json';
-const contractorTypes: Record<string, string[]> = contractorTypesJson;
 
 // Define types for our filter data
 export interface Neighborhood {
@@ -65,11 +63,11 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
 }) => {
   const { userData } = useAuth();
 
-  // Determine allowed service types for contractors
+  // Get service types based on user role
   let allowedServiceTypes = SERVICE_TYPES;
-  if (userData?.role === 'Contractor' && userData.contractorType) {
-    const allowedNames = contractorTypes[userData.contractorType] || [];
-    allowedServiceTypes = SERVICE_TYPES.filter(s => allowedNames.includes(s.name));
+  if (userData?.role === 'contractor') {
+    // For now, contractors can see all service types
+    allowedServiceTypes = SERVICE_TYPES;
   }
 
   // Initialize state with all items selected by default

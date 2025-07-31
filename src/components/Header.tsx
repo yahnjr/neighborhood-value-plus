@@ -41,7 +41,7 @@ const Header: React.FC<HeaderProps> = ({
     onAddPoint // <-- add this
 }) => {
     const [activePanel, setActivePanel] = useState<string | null>(null);
-    const { user: _user, userData, isAnonymous: _isAnonymous, signOut: _signOut } = useAuth();
+    const { user: _user, userData, signOut: _signOut } = useAuth();
 
     useEffect(() => {
         if (addPointCoordinates) {
@@ -111,7 +111,7 @@ const Header: React.FC<HeaderProps> = ({
                     <button className={activePanel === 'login' ? 'active' : ''} onClick={() => togglePanel('login')}>
                         <FontAwesomeIcon icon={faUser} />
                     </button>
-                    {(userData?.role === 'Admin') && (
+                    {(userData?.role === 'user' || userData?.role === 'admin') && (
                         <button className={(activePanel === 'add-point' || isAddingPoint) ? 'active' : ''} onClick={() => togglePanel('add-point')}>
                             <FontAwesomeIcon icon={faPlus} />
                         </button>

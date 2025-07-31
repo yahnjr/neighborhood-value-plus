@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../services/auth-context';
 import contractorTypesJson from '../constants/contractorTypes.json';
-import { updateFeatureInLayer, GeoJSONFeature } from '../services/geojsonService';
+import { updateFeatureInLayer, GeoJSONFeature } from '../services/supabaseService';
 
 const contractorTypes: Record<string, string[]> = contractorTypesJson;
 
@@ -33,8 +33,8 @@ const PointPopup: React.FC<PointPopupProps> = ({
   onStatusUpdate
 }) => {
   const { userData } = useAuth();
-  const isAdmin = userData?.role === 'Admin';
-  const isContractor = userData?.role === 'Contractor';
+  const isAdmin = userData?.role === 'admin';
+  const isContractor = userData?.role === 'contractor';
   const allowedForContractor = isContractor && userData.contractorType && jobType && contractorTypes[userData.contractorType]?.includes(jobType);
   const [statusValue, setStatusValue] = useState(status || '');
   const [saving, setSaving] = useState(false);

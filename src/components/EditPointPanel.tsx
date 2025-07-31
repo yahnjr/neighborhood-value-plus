@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
-import { GeoJSONFeature, updateFeatureInLayer, deleteFeatureFromLayer } from '../services/geojsonService';
+import { GeoJSONFeature, updateFeatureInLayer, deleteFeatureFromLayer } from '../services/supabaseService';
 import ServiceTypeDropdown from './ServiceTypeDropdown';
 
 interface EditPointPanelProps {

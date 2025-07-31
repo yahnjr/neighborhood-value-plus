@@ -8,9 +8,8 @@ import {
   addFeatureToLayer,
   updateFeatureInLayer,
   deleteFeatureFromLayer,
-  createLayerBackup,
   clearLayerCache
-} from '../services/geojsonService';
+} from '../services/supabaseService';
 
 interface UseGeoJSONDataReturn {
   // State
@@ -24,7 +23,6 @@ interface UseGeoJSONDataReturn {
   addPoint: (layerName: string, feature: GeoJSONFeature) => Promise<void>;
   updatePoint: (layerName: string, feature: GeoJSONFeature) => Promise<void>;
   deletePoint: (layerName: string, featureId: string) => Promise<void>;
-  createBackup: (layerName: string) => Promise<void>;
   
   // Utilities
   getLayerFeatures: (layerName: string) => GeoJSONFeature[];
@@ -142,19 +140,6 @@ export const useGeoJSONData = (): UseGeoJSONDataReturn => {
     }
   }, []);
 
-  // Create a backup of a layer
-  const createBackup = useCallback(async (layerName: string) => {
-    setError(null);
-    try {
-      await createLayerBackup(layerName);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : `Failed to create backup for ${layerName}`;
-      setError(errorMessage);
-      console.error(`Error creating backup for ${layerName}:`, err);
-      throw err;
-    }
-  }, []);
-
   // Get features for a specific layer
   const getLayerFeatures = useCallback((layerName: string): GeoJSONFeature[] => {
     return layers[layerName]?.features || [];
@@ -178,7 +163,6 @@ export const useGeoJSONData = (): UseGeoJSONDataReturn => {
     addPoint,
     updatePoint,
     deletePoint,
-    createBackup,
     
     // Utilities
     getLayerFeatures,
