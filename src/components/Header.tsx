@@ -24,7 +24,8 @@ interface HeaderProps {
     setIsAddingPoint: (isAdding: boolean) => void;
     addPointCoordinates?: { lat: number; lng: number; neighborhood?: string | null; crossStreet?: string | null };
     setAddPointCoordinates: (coords: { lat: number; lng: number; neighborhood?: string | null; crossStreet?: string | null } | null) => void;
-    onAddPoint?: (point: any) => Promise<void>; // <-- add this
+    onAddPoint?: (point: any) => Promise<void>;
+    geoJsonData?: any;
 }
 
 
@@ -38,7 +39,8 @@ const Header: React.FC<HeaderProps> = ({
     setIsAddingPoint,
     addPointCoordinates,
     setAddPointCoordinates,
-    onAddPoint // <-- add this
+    onAddPoint,
+    geoJsonData
 }) => {
     const [activePanel, setActivePanel] = useState<string | null>(null);
     const { user: _user, userData, signOut: _signOut } = useAuth();
@@ -140,6 +142,7 @@ const Header: React.FC<HeaderProps> = ({
                     coordinates={addPointCoordinates}
                     onCoordinatesChange={setAddPointCoordinates}
                     setIsAddingPoint={setIsAddingPoint}
+                    geoJsonData={geoJsonData}
                 />
             )}
         </>

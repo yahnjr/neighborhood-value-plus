@@ -498,7 +498,18 @@ const MapComponent: React.FC<MapComponentProps> = ({
         )}
 
         {geoJsonData.PortlandStreets && (
-          <Source id="streets" type="geojson" data={geoJsonData.PortlandStreets}></Source>
+          <Source id="streets" type="geojson" data={geoJsonData.PortlandStreets}>
+            <Layer 
+              id="streets-line"
+              type="line"
+              source="streets"
+              paint={{
+                'line-color': '#888',
+                'line-width': 0,
+                'line-opacity': 0
+              }}
+            />
+          </Source>
         )}
 
         {/* Search Result Marker */}

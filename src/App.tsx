@@ -99,6 +99,7 @@ function App() {
           addPointCoordinates={addPointCoordinates === null ? undefined : addPointCoordinates}
           setAddPointCoordinates={setAddPointCoordinates}
           onAddPoint={handleAddPointAndRefresh}
+          geoJsonData={geojson.layers}
         />
         <MapComponent
           viewState={mapViewState}
