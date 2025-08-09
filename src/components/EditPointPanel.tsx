@@ -32,7 +32,7 @@ const EditPointPanel: React.FC<EditPointPanelProps> = ({
 
     useEffect(() => {
         if (point && point.properties) {
-            setServiceType(point.properties["Service Ty"] || '');
+            setServiceType(point.properties["Service_Ty"] || '');
             setCrossStreet(point.properties["Cross Stre"] || '');
             setNeighborhood(point.properties["neighbhood"] || '');
             setStatus(point.properties["Status"] || 'Active');
@@ -52,7 +52,7 @@ const EditPointPanel: React.FC<EditPointPanelProps> = ({
                 ...point,
                 properties: {
                     ...point.properties,
-                    "Service Ty": serviceType,
+                    "Service_Ty": serviceType,
                     "Cross Stre": crossStreet,
                     "neighbhood": neighborhood,
                     "Status": status,

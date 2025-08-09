@@ -148,7 +148,7 @@ export const useGeoJSONData = (): UseGeoJSONDataReturn => {
   // Find a specific feature by ID
   const findFeatureById = useCallback((layerName: string, featureId: string): GeoJSONFeature | undefined => {
     const layerFeatures = getLayerFeatures(layerName);
-    return layerFeatures.find(feature => feature.properties?.id === featureId);
+    return layerFeatures.find(feature => feature.id === featureId);
   }, [getLayerFeatures]);
 
   return {

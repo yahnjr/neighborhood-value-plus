@@ -9,6 +9,7 @@ import type { Feature, Polygon, MultiPolygon } from 'geojson';
 interface AddPointPanelProps {
     onClose: () => void;
     onAddPoint: (point: GeoJSONFeature) => void;
+    onPointAdded?: (point: GeoJSONFeature) => void; // Callback when point is successfully added
     coordinates?: { lat: number; lng: number; neighborhood?: string | null; crossStreet?: string | null };
     onCoordinatesChange: (coords: { lat: number; lng: number; neighborhood?: string | null; crossStreet?: string | null } | null) => void;
     setIsAddingPoint: (isAdding: boolean) => void;
@@ -19,6 +20,10 @@ interface AddPointPanelProps {
             features: any[];
         };
         PortlandStreets?: {
+            type: 'FeatureCollection';
+            features: any[];
+        };
+        contractors?: {
             type: 'FeatureCollection';
             features: any[];
         };
@@ -587,6 +592,7 @@ const DetailsStep: React.FC<DetailsStepProps> = ({ onBack, onSubmit, isSubmittin
 const AddPointPanel: React.FC<AddPointPanelProps> = ({ 
     onClose, 
     onAddPoint, 
+    onPointAdded,
     coordinates, 
     onCoordinatesChange, 
     setIsAddingPoint,
@@ -736,16 +742,13 @@ const AddPointPanel: React.FC<AddPointPanelProps> = ({
                     coordinates: [coordinates.lng, coordinates.lat]
                 },
                 properties: {
-                    FID,
-                    "Service Ty": serviceType,
-                    "Cross Stre": locationDetails.crossStreet,
-                    "neighbhood": locationDetails.neighborhood,
-                    "Status": details.status,
-                    "Full Addre": details.fullAddress,
-                    "Referral S": details.referralSource,
-                    "Estimate": details.estimate,
-                    "created_at": new Date().toISOString(),
-                    "updated_at": new Date().toISOString()
+                    Service_Ty: serviceType,
+                    Cross_Stre: locationDetails.crossStreet,
+                    neighbhood: locationDetails.neighborhood,
+                    Status: details.status,
+                    Full_Addre: details.fullAddress,
+                    "Refferal S": details.referralSource,
+                    Estimate: details.estimate
                 }
             };
 
@@ -753,6 +756,12 @@ const AddPointPanel: React.FC<AddPointPanelProps> = ({
             await addFeatureToLayer(layerName, newFeature);
             
             onAddPoint(newFeature);
+            
+            // Call the onPointAdded callback if provided
+            if (onPointAdded) {
+                onPointAdded(newFeature);
+            }
+            
             console.log('Point added successfully!');
             onClose();
         } catch (error) {
@@ -823,7 +832,7 @@ const AddPointPanel: React.FC<AddPointPanelProps> = ({
     };
 
     return (
-        <div className="header-panel add-point-panel">
+        <div className={`header-panel add-point-panel ${currentStep === 0 ? 'location-step' : 'details-step'}`}>
             <div className="panel-header">
                 <h3>Add New Service Point</h3>
                 <button className="close-btn" onClick={onClose} disabled={isSubmitting}>

@@ -9,7 +9,8 @@ import {
   faMoon,
   faBroom,
   faTrash,
-  faTree
+  faTree,
+  faPaintRoller
 } from '@fortawesome/free-solid-svg-icons';
 import { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 
@@ -32,4 +33,5 @@ export const SERVICE_TYPES: ServiceType[] = [
   { id: 'vacant-home-cleanup', name: 'Vacant Home Cleanup', color: '#800000', icon: faBroom },
   { id: 'trash-debris', name: 'Trash or Debris Dump Site', color: '#000000', icon: faTrash },
   { id: 'overgrown-vegetation', name: 'Overgrown Bushes or Trees', color: '#228B22', icon: faTree },
+  { id: 'graffiti-cleanup', name: 'Graffiti Cleanup', color: '#FF4500', icon: faPaintRoller },
 ];

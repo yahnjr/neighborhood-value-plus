@@ -38,6 +38,8 @@ function App() {
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
   const [isAddingPoint, setIsAddingPoint] = useState(false);
   const [addPointCoordinates, setAddPointCoordinates] = useState<{ lat: number; lng: number; neighborhood?: string | null; crossStreet?: string | null } | null>(null);
+  const [showContractors, setShowContractors] = useState(false);
+  const [analyticsMode, setAnalyticsMode] = useState(false);
 
   const handleLocationSelect = (locationData: MapViewState & { address: string }) => {
     // Update map view state
@@ -72,8 +74,8 @@ function App() {
 
   // Handler for adding a point and refreshing map data
   const handleAddPointAndRefresh = async (point: any) => {
-    // Add the point to the servicePoints layer
-    await geojson.addPoint("servicePoints", point);
+    // Add the point to the addpoints layer
+    await geojson.addPoint("addpoints", point);
     // Refresh all layers so the map updates
     await geojson.refreshAllLayers();
     // Optionally clear add point coordinates
@@ -100,6 +102,10 @@ function App() {
           setAddPointCoordinates={setAddPointCoordinates}
           onAddPoint={handleAddPointAndRefresh}
           geoJsonData={geojson.layers}
+          showContractors={showContractors}
+          setShowContractors={setShowContractors}
+          analyticsMode={analyticsMode}
+          setAnalyticsMode={setAnalyticsMode}
         />
         <MapComponent
           viewState={mapViewState}
@@ -111,6 +117,9 @@ function App() {
           addPointCoordinates={addPointCoordinates === null ? undefined : addPointCoordinates}
           geoJsonData={geojson.layers}
           loadingGeoJson={geojson.loading}
+          showContractors={showContractors}
+          onRefreshData={() => geojson.refreshLayer('addpoints')}
+          analyticsMode={analyticsMode}
         />
       </div>
     </AuthProvider>

@@ -45,6 +45,7 @@ interface MapComponentProps {
     zoom: number;
   };
   onViewStateChange?: (viewState: any) => void;
+  showContractors?: boolean;
   searchMarker?: {
     longitude: number;
     latitude: number;
@@ -56,6 +57,8 @@ interface MapComponentProps {
   addPointCoordinates?: { lat: number; lng: number; neighborhood?: string | null; crossStreet?: string | null };
   geoJsonData: GeoJsonData;
   loadingGeoJson: boolean;
+  onRefreshData?: () => Promise<void>;
+  analyticsMode?: boolean;
 }
 
 // No test function needed
@@ -69,10 +72,16 @@ const MapComponent: React.FC<MapComponentProps> = ({
   onPointAdd,
   addPointCoordinates,
   geoJsonData,
-  loadingGeoJson
+  loadingGeoJson,
+  showContractors,
+  onRefreshData,
+  analyticsMode
 }) => {
   // Get authentication state
   const { user: _user, userData, loading: authLoading } = useAuth();
+
+  // State for selected contractor
+  const [selectedContractor, setSelectedContractor] = useState<GeoJSONFeature | null>(null);
   
   // State for neighborhood selection
   const [selectedNeighborhood, setSelectedNeighborhood] = useState<string | null>(null);
@@ -124,9 +133,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
         
         const layers = await fetchAllGeoJSONLayers();
         
-        // Delete commented out block for filtering layers
-        
-        console.log('Loaded and filtered layers:', Object.keys(layers));
+        console.log('Loaded layers:', Object.keys(layers));
         // Removed setGeoJsonData call - using prop instead
       } catch (err) {
         console.error('Error loading GeoJSON data:', err);
@@ -224,13 +231,22 @@ const MapComponent: React.FC<MapComponentProps> = ({
       return;
     }
 
-    // Check if clicked on addpoints layer
+    // Check if clicked on addpoints or contractors layer
     const features = event.features;
     if (features && features.length > 0) {
       const addpointFeature = features.find((f: any) => f.source === 'addpoints');
       if (addpointFeature) {
         console.log('Clicked addpoint:', addpointFeature);
         setSelectedAddpoint(addpointFeature);
+        setSelectedContractor(null);
+        return;
+      }
+
+      const contractorFeature = features.find((f: any) => f.source === 'contractors');
+      if (contractorFeature) {
+        console.log('Clicked contractor:', contractorFeature);
+        setSelectedContractor(contractorFeature);
+        setSelectedAddpoint(null);
         return;
       }
     }
@@ -256,6 +272,17 @@ const MapComponent: React.FC<MapComponentProps> = ({
   // Filters map data based on selected neighborhoods and service types and user role.
   const getFilteredData = () => {
     const filtered: GeoJsonData = { ...geoJsonData };
+
+    // Handle contractors visibility - simple toggle for admin users only
+    if (filtered.contractors) {
+      // Only show contractors if user is admin AND showContractors is true
+      if (!(userData?.role === 'admin' && showContractors)) {
+        filtered.contractors = {
+          ...filtered.contractors,
+          features: []
+        };
+      }
+    }
 
     // Filter addpoints based on both neighborhood, service type, and user role
     if (filtered.addpoints) {
@@ -428,7 +455,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
         {...currentViewState}
         onMove={handleMove}
         onClick={handleMapClick}
-        interactiveLayerIds={['addpoints', 'neighborhoods-fill']}
+        interactiveLayerIds={['addpoints', 'neighborhoods-fill', 'contractors']}
         mapboxAccessToken={import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}
         style={{ width: '100%', height: '100%' }}
         mapStyle="mapbox://styles/mapbox/satellite-streets-v12"
@@ -483,10 +510,24 @@ const MapComponent: React.FC<MapComponentProps> = ({
           </Source>
         )}
 
+        {/* Contractors layer */}
+        {displayData.contractors && (
+          <Source id="contractors" type="geojson" data={displayData.contractors}>
+            <Layer {...(layerStyles.contractors as LayerProps)} />
+          </Source>
+        )}
+
         {/* Use filtered data for addpoints*/}
         {displayData.addpoints && (
           <Source id="addpoints" type="geojson" data={displayData.addpoints}>
-            <Layer id="addpoints" {...(layerStyles.addpoints as LayerProps)} />
+            {analyticsMode ? (
+              <>
+                <Layer id="addpoints-heatmap" {...(layerStyles.addpointsHeatmap as LayerProps)} />
+                <Layer id="addpoints-heatmap-circles" {...(layerStyles.addpointsHeatmapCircles as LayerProps)} />
+              </>
+            ) : (
+              <Layer id="addpoints" {...(layerStyles.addpoints as LayerProps)} />
+            )}
           </Source>
         )}
 
@@ -598,18 +639,43 @@ const MapComponent: React.FC<MapComponentProps> = ({
       {/* Addpoint Popup */}
       {selectedAddpoint && (
         (() => {
+          const handleStatusUpdate = async (newStatus: string) => {
+            console.log('[MapComponent] Status updated to:', newStatus);
+            // Update the local state immediately for better UX
+            if (selectedAddpoint) {
+              const updatedFeature = {
+                ...selectedAddpoint,
+                properties: {
+                  ...selectedAddpoint.properties,
+                  Status: newStatus
+                }
+              };
+              setSelectedAddpoint(updatedFeature);
+            }
+            
+            // Refresh the data from the server to ensure map is updated
+            if (onRefreshData) {
+              try {
+                await onRefreshData();
+                // Reduced logging - only log if there's an error
+              } catch (error) {
+                console.error('[MapComponent] Error refreshing data:', error);
+              }
+            }
+          };
+
           return (
             <PointPopup
               jobType={selectedAddpoint.properties?.["Service_Ty"]}
               location={selectedAddpoint.properties?.["Cross_Stre"]}
               status={selectedAddpoint.properties?.Status}
               fullAddress={selectedAddpoint.properties?.["Full_Addre"]}
-              referralSource={selectedAddpoint.properties?.["Referral_S"]}
+              referralSource={selectedAddpoint.properties?.["Refferal S"]}
               estimate={selectedAddpoint.properties?.Estimate}
               feature={selectedAddpoint}
               onClose={() => setSelectedAddpoint(null)}
               onEdit={() => handleEditPoint(selectedAddpoint)}
-              onStatusUpdate={() => { /* Optionally reload data here */ }}
+              onStatusUpdate={handleStatusUpdate}
             />
           );
         })()
@@ -622,6 +688,18 @@ const MapComponent: React.FC<MapComponentProps> = ({
           onClose={() => setEditingAddpoint(null)}
           onUpdatePoint={handleUpdatePoint}
           onDeletePoint={handleDeletePoint}
+        />
+      )}
+
+      {/* Contractor Popup */}
+      {selectedContractor && (
+        <PointPopup
+          location={selectedContractor.properties?.Address}
+          jobType={selectedContractor.properties?.Type}
+          fullAddress={selectedContractor.properties?.Name}
+          onClose={() => setSelectedContractor(null)}
+          onEdit={() => {}}
+          feature={selectedContractor}
         />
       )}
     </div>

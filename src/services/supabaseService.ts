@@ -24,20 +24,38 @@ const TABLE_MAPPING = {
   'addpoints': 'servicepoints', // lowercase to match Supabase table name
   'Sponsors': 'sponsors',
   'NeighborhoodBoundaries': 'neighborhoods',
-  'PortlandStreets': 'streets'
+  'PortlandStreets': 'streets',
+  'contractors': 'contractors'
 };
 
 // Convert Supabase row to GeoJSON Feature
 const rowToGeoJSON = (row: any): GeoJSONFeature => {
-  return {
+  const properties: any = {
+    ...row.properties,
+    created_at: row.created_at,
+    // Store the ID in properties as well to ensure it's preserved by Mapbox
+    database_id: row.id
+  };
+  
+  // Only add date and contractor fields if they exist (for servicepoints table)
+  if (row.DateClaimed !== undefined) {
+    properties.DateClaimed = row.DateClaimed;
+  }
+  if (row.DateCompleted !== undefined) {
+    properties.DateCompleted = row.DateCompleted;
+  }
+  if (row.Contractor !== undefined) {
+    properties.Contractor = row.Contractor;
+  }
+
+  const feature: GeoJSONFeature = {
     type: 'Feature',
     id: row.id,
     geometry: row.geom,
-    properties: {
-      ...row.properties,
-      created_at: row.created_at
-    }
+    properties
   };
+  
+  return feature;
 };
 
 export const fetchGeoJSONLayer = async (layerName: string): Promise<GeoJSON> => {
@@ -52,9 +70,14 @@ export const fetchGeoJSONLayer = async (layerName: string): Promise<GeoJSON> => 
       throw new Error(`Unknown layer: ${layerName}`);
     }
 
+    // Only select date and contractor fields for servicepoints table
+    const selectFields = tableName === 'servicepoints' 
+      ? 'id, geom, properties, created_at, DateClaimed, DateCompleted, Contractor'
+      : 'id, geom, properties, created_at';
+
     const { data, error } = await supabase
       .from(tableName)
-      .select('id, geom, properties, created_at');
+      .select(selectFields);
 
     if (error) {
       throw error;
@@ -137,6 +160,52 @@ export const updateFeatureInLayer = async (layerName: string, updatedFeature: Ge
   }
 };
 
+export const updateFeatureWithDates = async (layerName: string, featureId: string | number, updates: {
+  properties?: any;
+  DateClaimed?: string | null;
+  DateCompleted?: string | null;
+  Contractor?: string | null;
+}): Promise<GeoJSON> => {
+  try {
+    const tableName = TABLE_MAPPING[layerName as keyof typeof TABLE_MAPPING];
+    if (!tableName) {
+      throw new Error(`Unknown layer: ${layerName}`);
+    }
+
+    const updateData: any = {};
+    if (updates.properties) {
+      updateData.properties = updates.properties;
+    }
+    if (updates.DateClaimed !== undefined) {
+      updateData.DateClaimed = updates.DateClaimed;
+    }
+    if (updates.DateCompleted !== undefined) {
+      updateData.DateCompleted = updates.DateCompleted;
+    }
+    if (updates.Contractor !== undefined) {
+      updateData.Contractor = updates.Contractor;
+    }
+
+    console.log('[updateFeatureWithDates] Updating feature:', featureId, 'with data:', updateData);
+
+    const { error } = await supabase
+      .from(tableName)
+      .update(updateData)
+      .eq('id', featureId);
+
+    if (error) throw error;
+
+    // Clear cache for this layer
+    clearLayerCache(layerName);
+
+    // Fetch and return updated layer
+    return await fetchGeoJSONLayer(layerName);
+  } catch (error) {
+    console.error(`Error updating feature with dates in ${layerName}:`, error);
+    throw error;
+  }
+};
+
 export const deleteFeatureFromLayer = async (layerName: string, featureId: string): Promise<GeoJSON> => {
   try {
     const tableName = TABLE_MAPPING[layerName as keyof typeof TABLE_MAPPING];
@@ -201,8 +270,6 @@ export const fetchAllGeoJSONLayers = async (): Promise<{ [key: string]: GeoJSON 
   });
  
   await Promise.allSettled(fetchPromises);
- 
-  // Handle any errors silently and return successful results
  
   return results;
 };
