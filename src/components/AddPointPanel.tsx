@@ -68,11 +68,11 @@ const LocationStep: React.FC<LocationStepProps> = ({ onNext, coordinates, onSele
                 display: 'flex', 
                 justifyContent: 'space-between', 
                 alignItems: 'center',
-                marginBottom: '16px' 
+                marginBottom: '8px' 
             }}>
-                <h3 style={{ margin: 0 }}>Step 1: Choose Location</h3>
+                <h3 style={{ margin: 0, fontSize: '15px' }}>Step 1: Choose Location</h3>
                 <div className="step-indicator" style={{ 
-                    fontSize: '12px', 
+                    fontSize: '11px', 
                     color: '#666',
                     fontWeight: '500' 
                 }}>1 of 4</div>
@@ -80,29 +80,28 @@ const LocationStep: React.FC<LocationStepProps> = ({ onNext, coordinates, onSele
             <div className="step-content" style={{ 
                 display: 'flex', 
                 flexDirection: 'column', 
-                gap: '16px' 
+                gap: '8px' 
             }}>
                 <div style={{ 
                     textAlign: 'center', 
-                    padding: '24px 0' 
+                    padding: '8px 0' 
                 }}>
                     <FontAwesomeIcon 
                         icon={faMapMarkerAlt} 
                         style={{ 
-                            fontSize: '48px', 
+                            fontSize: '28px', 
                             color: '#2196F3', 
-                            marginBottom: '16px' 
+                            marginBottom: '8px' 
                         }} 
                     />
                     <p style={{ 
-                        margin: '0 0 16px 0', 
-                        fontSize: '16px', 
+                        margin: '0 0 8px 0', 
+                        fontSize: '13px', 
                         color: '#333' 
                     }}>
                         Click on the map to select a location for the new service point.
                     </p>
                 </div>
-                
                 {!coordinates && (
                     <button 
                         className="add-point-btn"
@@ -111,43 +110,47 @@ const LocationStep: React.FC<LocationStepProps> = ({ onNext, coordinates, onSele
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            gap: '8px'
+                            gap: '6px',
+                            fontSize: '13px',
+                            padding: '6px 10px',
+                            marginTop: '2px'
                         }}
                     >
-                        <FontAwesomeIcon icon={faMapMarkerAlt} />
+                        <FontAwesomeIcon icon={faMapMarkerAlt} style={{fontSize: '16px'}} />
                         Select Location on Map
                     </button>
                 )}
-                
                 {coordinates && (
                     <div style={{ 
                         display: 'flex', 
                         flexDirection: 'column', 
-                        gap: '16px' 
+                        gap: '8px' 
                     }}>
                         <div style={{ 
                             background: '#f5f5f5', 
-                            padding: '16px', 
+                            padding: '8px', 
                             borderRadius: '8px',
                             border: '1px solid #e0e0e0'
                         }}>
                             <p style={{ 
-                                margin: '0 0 8px 0', 
+                                margin: '0 0 4px 0', 
                                 fontWeight: '600', 
-                                color: '#333' 
+                                color: '#333',
+                                fontSize: '12px'
                             }}>
                                 Selected Coordinates:
                             </p>
-                            <p style={{ margin: '4px 0', fontSize: '14px' }}>
+                            <p style={{ margin: '2px 0', fontSize: '12px' }}>
                                 Latitude: {coordinates.lat.toFixed(6)}
                             </p>
-                            <p style={{ margin: '4px 0', fontSize: '14px' }}>
+                            <p style={{ margin: '2px 0', fontSize: '12px' }}>
                                 Longitude: {coordinates.lng.toFixed(6)}
                             </p>
                         </div>
                         <button 
                             className="add-point-btn"
                             onClick={onNext}
+                            style={{fontSize: '13px', padding: '6px 10px', marginTop: '2px'}}
                         >
                             Continue
                         </button>
@@ -318,8 +321,11 @@ const ServiceTypeStep: React.FC<ServiceTypeStepProps> = ({ onNext, onBack, onSel
                 </p>
                 <div className="service-type-grid" style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-                    gap: '12px'
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
+                    gap: '8px',
+                    maxHeight: '300px',
+                    overflowY: 'auto',
+                    marginBottom: '16px'
                 }}>
                     {SERVICE_TYPES.map((serviceType) => (
                         <div
@@ -333,12 +339,15 @@ const ServiceTypeStep: React.FC<ServiceTypeStepProps> = ({ onNext, onBack, onSel
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: 'center',
-                                padding: '16px 12px',
+                                justifyContent: 'center',
+                                padding: '12px 8px',
                                 border: '2px solid #e0e0e0',
                                 borderRadius: '8px',
                                 cursor: 'pointer',
                                 transition: 'all 0.2s ease',
-                                background: 'white'
+                                background: 'white',
+                                minHeight: '80px',
+                                textAlign: 'center'
                             }}
                             onMouseEnter={(e) => {
                                 e.currentTarget.style.borderColor = serviceType.color;
@@ -353,18 +362,20 @@ const ServiceTypeStep: React.FC<ServiceTypeStepProps> = ({ onNext, onBack, onSel
                                 icon={serviceType.icon}
                                 style={{ 
                                     color: serviceType.color,
-                                    fontSize: '24px',
-                                    marginBottom: '8px'
+                                    fontSize: '20px',
+                                    marginBottom: '6px'
                                 }}
                                 className="service-icon"
                             />
                             <span 
                                 className="service-name"
                                 style={{
-                                    fontSize: '12px',
+                                    fontSize: '11px',
                                     fontWeight: '500',
                                     textAlign: 'center',
-                                    color: '#333'
+                                    color: '#333',
+                                    lineHeight: '1.2',
+                                    wordBreak: 'break-word'
                                 }}
                             >
                                 {serviceType.name}
@@ -832,68 +843,61 @@ const AddPointPanel: React.FC<AddPointPanelProps> = ({
     };
 
     return (
-        <div className={`header-panel add-point-panel ${currentStep === 0 ? 'location-step' : 'details-step'}`}>
-            <div className="panel-header">
-                <h3>Add New Service Point</h3>
-                <button className="close-btn" onClick={onClose} disabled={isSubmitting}>
-                    <FontAwesomeIcon icon={faTimes} />
-                </button>
-            </div>
-            <div className="panel-content">
-                {error && (
-                    <div className="error-message" style={{ 
-                        color: '#d32f2f', 
-                        backgroundColor: '#ffebee', 
-                        padding: '8px 12px', 
-                        borderRadius: '4px', 
-                        marginBottom: '16px',
-                        fontSize: '14px'
-                    }}>
-                        {error}
-                    </div>
-                )}
-                
-                {/* Progress indicator */}
-                <div className="progress-indicator" style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    marginBottom: '24px',
-                    padding: '0 4px'
-                }}>
-                    {[0, 1, 2, 3].map((step) => (
-                        <React.Fragment key={step}>
+        <div className={`header-panel add-point-panel ${currentStep === 0 ? 'location-step' : 'details-step'}`} style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            height: '100%' 
+        }}> 
+            <div className="panel-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                    <h3 style={{ fontSize: '1rem', marginRight: '10px', marginBottom: 0 }}>Add New Service Point</h3>
+                    <div className="progress-indicator" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: 0 }}>
+                        {[0, 1, 2, 3].map((step) => (
                             <div
+                                key={step}
                                 style={{
-                                    width: '24px',
-                                    height: '24px',
+                                    width: '16px',
+                                    height: '16px',
                                     borderRadius: '50%',
                                     background: step <= currentStep ? '#2196F3' : '#e0e0e0',
                                     color: step <= currentStep ? 'white' : '#666',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    fontSize: '12px',
+                                    fontSize: '10px',
                                     fontWeight: '500'
                                 }}
                             >
                                 {step + 1}
                             </div>
-                            {step < 3 && (
-                                <div
-                                    style={{
-                                        flex: 1,
-                                        height: '2px',
-                                        background: step < currentStep ? '#2196F3' : '#e0e0e0',
-                                        margin: '0 8px'
-                                    }}
-                                />
-                            )}
-                        </React.Fragment>
-                    ))}
+                        ))}
+                    </div>
                 </div>
-
+                <button className="close-btn" onClick={onClose} disabled={isSubmitting} style={{ fontSize: '1rem', padding: '2px 8px' }}>
+                    <FontAwesomeIcon icon={faTimes} />
+                </button>
+            </div>
+            <div className="panel-content" style={{ 
+                padding: '12px 8px', 
+                flex: 1, 
+                overflowY: 'auto',
+                paddingBottom: '8px' 
+            }}>
+                {error && (
+                    <div className="error-message" style={{ 
+                        color: '#d32f2f', 
+                        backgroundColor: '#ffebee', 
+                        padding: '6px 8px', 
+                        borderRadius: '4px', 
+                        marginBottom: '10px',
+                        fontSize: '12px'
+                    }}>
+                        {error}
+                    </div>
+                )}
                 {renderStep()}
             </div>
+            {/* Removed floating back button - each step has its own back button */}
         </div>
     );
 };

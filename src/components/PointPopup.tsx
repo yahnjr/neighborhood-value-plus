@@ -257,6 +257,52 @@ const PointPopup: React.FC<PointPopupProps> = ({
           </div>
         </div>
 
+        {/* Contractor Information - Visible to all users when point is claimed/completed */}
+        {(feature?.properties?.Contractor || feature?.properties?.DateClaimed || feature?.properties?.DateCompleted) && (
+          <div className="point-popup-row" style={{ 
+            marginTop: '12px', 
+            padding: '12px', 
+            backgroundColor: '#f8f9fa', 
+            borderRadius: '6px',
+            border: '1px solid #e9ecef'
+          }}>
+            <div style={{ 
+              fontSize: '14px', 
+              fontWeight: '600', 
+              marginBottom: '8px', 
+              color: '#495057',
+              borderBottom: '1px solid #e9ecef',
+              paddingBottom: '4px'
+            }}>
+              Contractor Information
+            </div>
+            {feature?.properties?.Contractor && (
+              <div style={{ marginBottom: '6px' }}>
+                <div className="point-popup-label">Claimed by</div>
+                <div className="point-popup-value">
+                  {feature.properties.Contractor}
+                </div>
+              </div>
+            )}
+            {feature?.properties?.DateClaimed && (
+              <div style={{ marginBottom: '6px' }}>
+                <div className="point-popup-label">Date Claimed</div>
+                <div className="point-popup-value">
+                  {new Date(feature.properties.DateClaimed).toLocaleDateString()}
+                </div>
+              </div>
+            )}
+            {feature?.properties?.DateCompleted && (
+              <div>
+                <div className="point-popup-label">Date Completed</div>
+                <div className="point-popup-value">
+                  {new Date(feature.properties.DateCompleted).toLocaleDateString()}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {isAdmin && (
           <div className="point-popup-row" style={{ marginTop: '12px' }}>
             {/* Full Address */}
@@ -273,16 +319,16 @@ const PointPopup: React.FC<PointPopupProps> = ({
               <div className="point-popup-label">Estimate</div>
               <div className="point-popup-value">$ {estimate || 'N/A'}</div>
             </div>
-            {/* Contractor */}
+            {/* Admin-only contractor details (redundant but kept for admin debugging) */}
             <div>
-              <div className="point-popup-label">Contractor</div>
+              <div className="point-popup-label">Contractor (Admin)</div>
               <div className="point-popup-value">
                 {feature?.properties?.Contractor || 'N/A'}
               </div>
             </div>
             {/* Date Claimed */}
             <div>
-              <div className="point-popup-label">Date Claimed</div>
+              <div className="point-popup-label">Date Claimed (Admin)</div>
               <div className="point-popup-value">
                 {feature?.properties?.DateClaimed 
                   ? new Date(feature.properties.DateClaimed).toLocaleDateString()
@@ -292,7 +338,7 @@ const PointPopup: React.FC<PointPopupProps> = ({
             </div>
             {/* Date Completed */}
             <div>
-              <div className="point-popup-label">Date Completed</div>
+              <div className="point-popup-label">Date Completed (Admin)</div>
               <div className="point-popup-value">
                 {feature?.properties?.DateCompleted 
                   ? new Date(feature.properties.DateCompleted).toLocaleDateString()
@@ -310,35 +356,7 @@ const PointPopup: React.FC<PointPopupProps> = ({
             </div>
           </div>
         )}
-        {/* Show date info for contractors too when available */}
-        {allowedForContractor && !isAdmin && (feature?.properties?.DateClaimed || feature?.properties?.DateCompleted || feature?.properties?.Contractor) && (
-          <div className="point-popup-row" style={{ marginTop: '12px' }}>
-            {feature?.properties?.Contractor && (
-              <div>
-                <div className="point-popup-label">Claimed by</div>
-                <div className="point-popup-value">
-                  {feature.properties.Contractor}
-                </div>
-              </div>
-            )}
-            {feature?.properties?.DateClaimed && (
-              <div>
-                <div className="point-popup-label">Date Claimed</div>
-                <div className="point-popup-value">
-                  {new Date(feature.properties.DateClaimed).toLocaleDateString()}
-                </div>
-              </div>
-            )}
-            {feature?.properties?.DateCompleted && (
-              <div>
-                <div className="point-popup-label">Date Completed</div>
-                <div className="point-popup-value">
-                  {new Date(feature.properties.DateCompleted).toLocaleDateString()}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+        {/* Show date info for contractors too when available - REMOVED: Now shown universally above */}
       </div>
       {/* Footer with Edit button */}
       {(isAdmin || allowedForContractor) && (
