@@ -33,7 +33,17 @@ function App() {
   // Filter state and panel open/close state
   const [filters, setFilters] = useState<FilterState>({
     selectedNeighborhoods: [],
-    selectedServiceTypes: []
+    selectedServiceTypes: [],
+    dateRange: {
+      startDate: null,
+      endDate: null,
+      preset: '30d'
+    },
+    heatmapSettings: {
+      enabled: true,
+      intensity: 1,
+      radius: 50
+    }
   });
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
   const [isAddingPoint, setIsAddingPoint] = useState(false);

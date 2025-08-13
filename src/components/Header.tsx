@@ -226,10 +226,14 @@ const Header: React.FC<HeaderProps> = ({
 
             {/* Analytics Panels */}
             {analyticsLeftOpen && (
-                <AnalyticsLeftPanel onClose={closeAnalytics} />
+                <AnalyticsLeftPanel onClose={closeAnalytics} geoJsonData={geoJsonData || {}} />
             )}
             {analyticsRightOpen && (
-                <AnalyticsRightPanel onClose={closeAnalytics} />
+                <AnalyticsRightPanel 
+                    onClose={closeAnalytics} 
+                    filters={filters}
+                    onFiltersChange={onFiltersChange}
+                />
             )}
         </>
     );

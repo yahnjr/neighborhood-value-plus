@@ -23,6 +23,15 @@
       "fill-outline-color": "#FFFFFF"
     }
   },
+  "NeighborhoodBoundariesAnalytics": {
+    "type": "fill",
+    "source": "neighborhoods",
+    "layout": {},
+    "paint": {
+      "fill-opacity": 0,
+      "fill-outline-color": "#FFFFFF"
+    }
+  },
   "NeighborhoodBoundariesOutline": {
     "type": "line",
     "source": "neighborhoods",
@@ -108,21 +117,16 @@
   "addpointsHeatmap": {
     "type": "heatmap",
     "source": "addpoints",
+    "maxzoom": 15,
     "layout": {},
     "paint": {
-      "heatmap-weight": [
-        "interpolate",
-        ["linear"],
-        ["get", "weight"],
-        0, 0,
-        6, 1
-      ],
+      "heatmap-weight": 1,
       "heatmap-intensity": [
         "interpolate",
         ["linear"],
         ["zoom"],
         0, 1,
-        9, 3
+        15, 3
       ],
       "heatmap-color": [
         "interpolate",
@@ -139,53 +143,63 @@
         "interpolate",
         ["linear"],
         ["zoom"],
-        0, 2,
-        9, 20
+        0, 15,
+        15, 60
       ],
       "heatmap-opacity": [
         "interpolate",
         ["linear"],
         ["zoom"],
         7, 1,
-        9, 0
+        15, 0.5
       ]
     }
   },
   "addpointsHeatmapCircles": {
     "type": "circle",
     "source": "addpoints",
+    "minzoom": 14,
     "layout": {},
     "paint": {
       "circle-radius": [
         "interpolate",
         ["linear"],
         ["zoom"],
-        7, ["interpolate", ["linear"], ["get", "point_count"], 0, 10, 100, 30],
-        16, ["interpolate", ["linear"], ["get", "point_count"], 0, 20, 100, 50]
+        14, 4,
+        16, 8,
+        18, 12
       ],
       "circle-color": [
-        "interpolate",
-        ["linear"],
-        ["get", "point_count"],
-        0, "#51bbd6",
-        100, "#f1f075",
-        750, "#f28cb1"
+        "match",
+        ["get", "Service_Ty"],
+          "Lawn Restoration", "#008000",      
+          "Sidewalk Repair", "#808080",          
+          "Homeless Outreach", "#FFA500",       
+          "Legacy Sponsored Block", "#FFD700",   
+          "Lifestyle Lottery Winner", "#800080", 
+          "Neighborhood History", "#0000FF",    
+          "Home For Sale", "#008080",             
+          "Overnight Patrol", "#000080",          
+          "Vacant Home Cleanup", "#800000",       
+          "Trash or Debris Dump Site", "#000000",
+          "Overgrown Bushes or Trees", "#228B22",
+          "#999999"
       ],
-      "circle-stroke-width": 1,
+      "circle-stroke-width": 2,
       "circle-stroke-color": "#fff",
       "circle-opacity": [
         "interpolate",
         ["linear"],
         ["zoom"],
-        7, 0,
-        9, 1
+        14, 0,
+        15, 0.8
       ],
       "circle-stroke-opacity": [
         "interpolate",
         ["linear"],
         ["zoom"],
-        7, 0,
-        9, 1
+        14, 0,
+        15, 0.9
       ]
     }
   }

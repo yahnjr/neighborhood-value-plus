@@ -297,7 +297,11 @@ const LocationConfirmStep: React.FC<LocationConfirmStepProps> = ({
 
 const ServiceTypeStep: React.FC<ServiceTypeStepProps> = ({ onNext, onBack, onSelectService }) => {
     return (
-        <div className="step">
+        <div className="step" style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            height: '100%' 
+        }}>
             <div className="step-header" style={{ 
                 display: 'flex', 
                 justifyContent: 'space-between', 
@@ -314,7 +318,9 @@ const ServiceTypeStep: React.FC<ServiceTypeStepProps> = ({ onNext, onBack, onSel
             <div className="step-content" style={{ 
                 display: 'flex', 
                 flexDirection: 'column', 
-                gap: '16px' 
+                gap: '16px',
+                flex: 1,
+                minHeight: '400px'
             }}>
                 <p style={{ margin: '0 0 8px 0', color: '#666' }}>
                     Choose the type of service for this location:
@@ -322,10 +328,12 @@ const ServiceTypeStep: React.FC<ServiceTypeStepProps> = ({ onNext, onBack, onSel
                 <div className="service-type-grid" style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
-                    gap: '8px',
-                    maxHeight: '300px',
+                    gap: '12px',
+                    flex: 1,
+                    minHeight: '300px',
                     overflowY: 'auto',
-                    marginBottom: '16px'
+                    marginBottom: '16px',
+                    padding: '8px 4px'
                 }}>
                     {SERVICE_TYPES.map((serviceType) => (
                         <div
@@ -340,13 +348,13 @@ const ServiceTypeStep: React.FC<ServiceTypeStepProps> = ({ onNext, onBack, onSel
                                 flexDirection: 'column',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                padding: '12px 8px',
+                                padding: '16px 12px',
                                 border: '2px solid #e0e0e0',
                                 borderRadius: '8px',
                                 cursor: 'pointer',
                                 transition: 'all 0.2s ease',
                                 background: 'white',
-                                minHeight: '80px',
+                                minHeight: '100px',
                                 textAlign: 'center'
                             }}
                             onMouseEnter={(e) => {
@@ -362,15 +370,15 @@ const ServiceTypeStep: React.FC<ServiceTypeStepProps> = ({ onNext, onBack, onSel
                                 icon={serviceType.icon}
                                 style={{ 
                                     color: serviceType.color,
-                                    fontSize: '20px',
-                                    marginBottom: '6px'
+                                    fontSize: '24px',
+                                    marginBottom: '8px'
                                 }}
                                 className="service-icon"
                             />
                             <span 
                                 className="service-name"
                                 style={{
-                                    fontSize: '11px',
+                                    fontSize: '12px',
                                     fontWeight: '500',
                                     textAlign: 'center',
                                     color: '#333',

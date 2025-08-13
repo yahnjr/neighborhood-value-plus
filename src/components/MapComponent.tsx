@@ -98,6 +98,42 @@ const MapComponent: React.FC<MapComponentProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   const [showSponsorHighlight, setShowSponsorHighlight] = useState(true);
+
+  // Generate dynamic heatmap layer styles based on filter settings
+  const getDynamicHeatmapStyle = (): LayerProps => {
+    const heatmapSettings = filters.heatmapSettings;
+    const baseStyle = layerStyles.addpointsHeatmap as any;
+    
+    if (!heatmapSettings) return baseStyle;
+
+    return {
+      ...baseStyle,
+      paint: {
+        ...baseStyle.paint,
+        'heatmap-intensity': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          0, heatmapSettings.intensity * 0.5,
+          15, heatmapSettings.intensity * 1.5
+        ],
+        'heatmap-radius': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          0, heatmapSettings.radius * 0.3,
+          15, heatmapSettings.radius * 1.2
+        ],
+        'heatmap-opacity': heatmapSettings.enabled ? [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          7, 1,
+          15, 0.5
+        ] : 0
+      }
+    } as LayerProps;
+  };
   const [highlightedSponsor, setHighlightedSponsor] = useState<GeoJSONFeature | null>(null);
 
   // State for popups
@@ -234,7 +270,9 @@ const MapComponent: React.FC<MapComponentProps> = ({
     // Check if clicked on addpoints or contractors layer
     const features = event.features;
     if (features && features.length > 0) {
-      const addpointFeature = features.find((f: any) => f.source === 'addpoints');
+      const addpointFeature = features.find((f: any) => 
+        f.source === 'addpoints' && (f.layer?.id === 'addpoints' || f.layer?.id === 'addpoints-heatmap-circles')
+      );
       if (addpointFeature) {
         console.log('Clicked addpoint:', addpointFeature);
         setSelectedAddpoint(addpointFeature);
@@ -302,6 +340,28 @@ const MapComponent: React.FC<MapComponentProps> = ({
         filteredFeatures = filteredFeatures.filter(feature => {
           const serviceType = feature.properties?.["Service_Ty"];
           return filters.selectedServiceTypes.includes(serviceType);
+        });
+      }
+
+      // Apply date range filter if specified
+      if (filters.dateRange && (filters.dateRange.startDate || filters.dateRange.endDate)) {
+        filteredFeatures = filteredFeatures.filter(feature => {
+          const createdAt = feature.properties?.created_at;
+          if (!createdAt) return true; // Include features without dates
+          
+          const featureDate = new Date(createdAt);
+          
+          // Check start date
+          if (filters.dateRange?.startDate && featureDate < filters.dateRange.startDate) {
+            return false;
+          }
+          
+          // Check end date
+          if (filters.dateRange?.endDate && featureDate > filters.dateRange.endDate) {
+            return false;
+          }
+          
+          return true;
         });
       }
 
@@ -455,7 +515,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
         {...currentViewState}
         onMove={handleMove}
         onClick={handleMapClick}
-        interactiveLayerIds={['addpoints', 'neighborhoods-fill', 'contractors']}
+        interactiveLayerIds={analyticsMode ? ['addpoints-heatmap-circles', 'neighborhoods-fill', 'contractors'] : ['addpoints', 'neighborhoods-fill', 'contractors']}
         mapboxAccessToken={import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}
         style={{ width: '100%', height: '100%' }}
         mapStyle="mapbox://styles/mapbox/satellite-streets-v12"
@@ -469,7 +529,10 @@ const MapComponent: React.FC<MapComponentProps> = ({
             <Layer
               id="neighborhoods-fill"
               type="fill"
-              paint={{
+              paint={analyticsMode ? {
+                'fill-opacity': 0,
+                'fill-outline-color': layerStyles.NeighborhoodBoundariesAnalytics.paint["fill-outline-color"]
+              } : {
                 'fill-color': (layerStyles.NeighborhoodBoundaries.paint["fill-color"] as any),
                 'fill-opacity': [
                   'interpolate',
@@ -520,13 +583,31 @@ const MapComponent: React.FC<MapComponentProps> = ({
         {/* Use filtered data for addpoints*/}
         {displayData.addpoints && (
           <Source id="addpoints" type="geojson" data={displayData.addpoints}>
-            {analyticsMode ? (
+            {analyticsMode && filters.heatmapSettings?.enabled !== false ? (
               <>
-                <Layer id="addpoints-heatmap" {...(layerStyles.addpointsHeatmap as LayerProps)} />
-                <Layer id="addpoints-heatmap-circles" {...(layerStyles.addpointsHeatmapCircles as LayerProps)} />
+                <Layer 
+                  id="addpoints-heatmap" 
+                  {...getDynamicHeatmapStyle()} 
+                  beforeId="neighborhoods-labels"
+                />
+                <Layer 
+                  id="addpoints-heatmap-circles" 
+                  {...(layerStyles.addpointsHeatmapCircles as LayerProps)} 
+                  beforeId="neighborhoods-labels"
+                />
               </>
+            ) : analyticsMode ? (
+              <Layer 
+                id="addpoints" 
+                {...(layerStyles.addpoints as LayerProps)} 
+                beforeId="neighborhoods-labels"
+              />
             ) : (
-              <Layer id="addpoints" {...(layerStyles.addpoints as LayerProps)} />
+              <Layer 
+                id="addpoints" 
+                {...(layerStyles.addpoints as LayerProps)} 
+                beforeId="neighborhoods-labels"
+              />
             )}
           </Source>
         )}

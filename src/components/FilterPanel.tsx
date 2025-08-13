@@ -17,6 +17,16 @@ export interface Neighborhood {
 export interface FilterState {
   selectedNeighborhoods: string[];
   selectedServiceTypes: string[];
+  dateRange?: {
+    startDate: Date | null;
+    endDate: Date | null;
+    preset?: '7d' | '30d' | '90d' | '1y' | 'all' | 'custom';
+  };
+  heatmapSettings?: {
+    enabled: boolean;
+    intensity: number;
+    radius: number;
+  };
 }
 
 interface FilterPanelProps {
