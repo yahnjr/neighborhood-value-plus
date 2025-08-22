@@ -2,9 +2,11 @@ import { useState } from 'react';
 import Header from './components/Header';
 import MapComponent from './components/MapComponent';
 import { FilterState } from './components/FilterPanel';
+import { SERVICE_TYPES } from './constants/serviceTypes';
 import './App.css';
 import { AuthProvider } from './services/auth-context';
 import { useGeoJSONData } from "./hooks/useGeoJSONData";
+import { GeoJSONFeature } from './services/supabaseService';
 import './config/env'; 
 
 interface MapViewState {
@@ -33,7 +35,7 @@ function App() {
   // Filter state and panel open/close state
   const [filters, setFilters] = useState<FilterState>({
     selectedNeighborhoods: [],
-    selectedServiceTypes: [],
+    selectedServiceTypes: SERVICE_TYPES.map(st => st.name),
     dateRange: {
       startDate: null,
       endDate: null,
@@ -97,6 +99,22 @@ function App() {
     setIsAddingPoint(false); // Turn off adding mode after selecting a point
   };
 
+  // Handler for when a job is clicked from the contractor table
+  const handleJobClick = (feature: GeoJSONFeature) => {
+    if (feature.geometry?.coordinates) {
+      const [lng, lat] = feature.geometry.coordinates;
+      // Quickly zoom to the job location
+      setMapViewState({
+        longitude: lng,
+        latitude: lat,
+        zoom: 16
+      });
+      
+      // TODO: Open the job popup after zooming
+      // This would require exposing a method from MapComponent to trigger popup
+    }
+  };
+
   return (
     <AuthProvider>
       <div className="App">
@@ -116,6 +134,7 @@ function App() {
           setShowContractors={setShowContractors}
           analyticsMode={analyticsMode}
           setAnalyticsMode={setAnalyticsMode}
+          onJobClick={handleJobClick}
         />
         <MapComponent
           viewState={mapViewState}

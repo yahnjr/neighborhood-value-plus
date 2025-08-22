@@ -11,9 +11,6 @@ import layerStyles from '../constants/layerStyles.json';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { LayerProps } from 'react-map-gl';
 import type { Feature, Polygon, MultiPolygon } from 'geojson';
-import contractorTypesJson from '../constants/contractorTypes.json';
-
-const contractorTypes: Record<string, string[]> = contractorTypesJson;
 
 // GeoJSON types
 interface GeoJSONFeature {
@@ -307,98 +304,66 @@ const MapComponent: React.FC<MapComponentProps> = ({
     setEditingAddpoint(null);
   };
 
-  // Filters map data based on selected neighborhoods and service types and user role.
-  const getFilteredData = () => {
-    const filtered: GeoJsonData = { ...geoJsonData };
+  // Gets map data with minimal filtering (only contractors visibility, NO contractor role filtering for map display)
+  const getMapData = () => {
+    const mapData: GeoJsonData = { ...geoJsonData };
 
     // Handle contractors visibility - simple toggle for admin users only
-    if (filtered.contractors) {
+    if (mapData.contractors) {
       // Only show contractors if user is admin AND showContractors is true
       if (!(userData?.role === 'admin' && showContractors)) {
-        filtered.contractors = {
-          ...filtered.contractors,
+        mapData.contractors = {
+          ...mapData.contractors,
           features: []
         };
       }
     }
 
-    // Filter addpoints based on both neighborhood, service type, and user role
-    if (filtered.addpoints) {
-      let filteredFeatures = filtered.addpoints.features;
+    // DO NOT filter map points for contractors - they should see all points on the map
+    // Filtering only applies to the ContractorJobTable, not the map display
 
-      // Apply neighborhood filter from either props or internal state
-      const activeNeighborhoods = selectedNeighborhood ? [selectedNeighborhood] : filters.selectedNeighborhoods;
-      if (activeNeighborhoods.length > 0) {
-        filteredFeatures = filteredFeatures.filter(feature => {
-          const neighborhood = feature.properties?.neighbhood;
-          return activeNeighborhoods.includes(neighborhood);
-        });
-      }
-
-      // Apply service type filter (use 'Service Ty' property only)
-      if (filters.selectedServiceTypes.length > 0) {
-        filteredFeatures = filteredFeatures.filter(feature => {
-          const serviceType = feature.properties?.["Service_Ty"];
-          return filters.selectedServiceTypes.includes(serviceType);
-        });
-      }
-
-      // Apply date range filter if specified
-      if (filters.dateRange && (filters.dateRange.startDate || filters.dateRange.endDate)) {
-        filteredFeatures = filteredFeatures.filter(feature => {
-          const createdAt = feature.properties?.created_at;
-          if (!createdAt) return true; // Include features without dates
-          
-          const featureDate = new Date(createdAt);
-          
-          // Check start date
-          if (filters.dateRange?.startDate && featureDate < filters.dateRange.startDate) {
-            return false;
-          }
-          
-          // Check end date
-          if (filters.dateRange?.endDate && featureDate > filters.dateRange.endDate) {
-            return false;
-          }
-          
-          return true;
-        });
-      }
-
-      // Further restrict for contractors: only show allowed service types
-      if (userData?.role === 'contractor' && userData.contractorType) {
-        const allowedNames = contractorTypes[userData.contractorType] || [];
-        filteredFeatures = filteredFeatures.filter(feature => {
-          const serviceType = feature.properties?.["Service_Ty"];
-          return allowedNames.includes(serviceType);
-        });
-      }
-
-      filtered.addpoints = {
-        ...filtered.addpoints,
-        features: filteredFeatures
-      };
-    }
-
-    // Filter neighborhood boundaries to only show selected neighborhoods (use 'MAPLABEL' only)
-    const activeNeighborhoods = selectedNeighborhood ? [selectedNeighborhood] : filters.selectedNeighborhoods;
-    if (filtered.NeighborhoodBoundaries && activeNeighborhoods.length > 0) {
-      const filteredBoundaries = filtered.NeighborhoodBoundaries.features.filter(feature => {
-        const neighborhood = feature.properties?.MAPLABEL;
-        return activeNeighborhoods.includes(neighborhood);
-      });
-
-      filtered.NeighborhoodBoundaries = {
-        ...filtered.NeighborhoodBoundaries,
-        features: filteredBoundaries
-      };
-    }
-
-    return filtered;
+    return mapData;
   };
 
-  // Get the filtered data to display
-  const displayData = getFilteredData();
+  // Gets neighborhood boundaries for the overlay (non-focus neighborhoods)
+  const getOverlayNeighborhoods = () => {
+    if (!geoJsonData.NeighborhoodBoundaries) return null;
+
+    let activeNeighborhoods = selectedNeighborhood ? [selectedNeighborhood] : filters.selectedNeighborhoods;
+    
+    // For contractors, always include their neighborhood as a focus area (no overlay)
+    if (userData?.role === 'contractor' && userData.neighborhood) {
+      activeNeighborhoods = [...activeNeighborhoods];
+      if (!activeNeighborhoods.includes(userData.neighborhood)) {
+        activeNeighborhoods = [userData.neighborhood];
+      }
+    }
+    
+    // If no neighborhoods are selected or all neighborhoods are selected, don't show overlay
+    if (activeNeighborhoods.length === 0 || 
+        activeNeighborhoods.length >= geoJsonData.NeighborhoodBoundaries.features.length) {
+      return null;
+    }
+
+    // Get neighborhoods that are NOT in the focus list (these will be overlayed)
+    const overlayBoundaries = geoJsonData.NeighborhoodBoundaries.features.filter(feature => {
+      const neighborhood = feature.properties?.MAPLABEL;
+      return !activeNeighborhoods.includes(neighborhood);
+    });
+
+    if (overlayBoundaries.length === 0) return null;
+
+    return {
+      ...geoJsonData.NeighborhoodBoundaries,
+      features: overlayBoundaries
+    };
+  };
+
+  // Get the map data to display (minimal filtering)
+  const displayData = getMapData();
+  
+  // Get overlay neighborhoods for fading effect
+  const overlayNeighborhoods = getOverlayNeighborhoods();
 
   // Show loading state while auth is loading or data is loading
   if (authLoading || loadingGeoJson) {
@@ -523,9 +488,9 @@ const MapComponent: React.FC<MapComponentProps> = ({
       >
         <NavigationControl position="top-right" />
 
-        {/* Use filtered data for neighborhood boundaries */}
-        {displayData.NeighborhoodBoundaries && (
-          <Source id="neighborhoods" type="geojson" data={displayData.NeighborhoodBoundaries}>
+        {/* Show all neighborhood boundaries (not filtered) */}
+        {geoJsonData.NeighborhoodBoundaries && (
+          <Source id="neighborhoods" type="geojson" data={geoJsonData.NeighborhoodBoundaries}>
             <Layer
               id="neighborhoods-fill"
               type="fill"
@@ -568,6 +533,20 @@ const MapComponent: React.FC<MapComponentProps> = ({
                   16, 0.5,
                   18, 0
                 ]
+              }}
+            />
+          </Source>
+        )}
+
+        {/* Add transparent white overlay for non-focus neighborhoods */}
+        {overlayNeighborhoods && (
+          <Source id="neighborhoods-overlay" type="geojson" data={overlayNeighborhoods}>
+            <Layer
+              id="neighborhoods-overlay-fill"
+              type="fill"
+              paint={{
+                'fill-color': '#ffffff',
+                'fill-opacity': 0.4
               }}
             />
           </Source>

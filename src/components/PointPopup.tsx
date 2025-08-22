@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../services/auth-context';
-import contractorTypesJson from '../constants/contractorTypes.json';
 import { updateFeatureWithDates, GeoJSONFeature } from '../services/supabaseService';
-
-const contractorTypes: Record<string, string[]> = contractorTypesJson;
 
 interface PointPopupProps {
   jobType?: string;
@@ -36,11 +33,9 @@ const PointPopup: React.FC<PointPopupProps> = ({
   const isAdmin = userData?.role === 'admin';
   const isContractor = userData?.role === 'contractor';
   
-  // Debug the contractor matching logic
-  const effectiveContractorType = userData?.contractorType || 'Contractor-Cleanup';
-  const contractorTypeMatch = userData && jobType && contractorTypes[effectiveContractorType]?.includes(jobType);
-  
-  const allowedForContractor = isContractor && contractorTypeMatch;
+  // TODO: Update contractor matching logic based on neighborhood instead of contractor type
+  // For now, allow all contractors to see all jobs (since we're removing types)
+  const allowedForContractor = isContractor;
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -67,7 +62,7 @@ const PointPopup: React.FC<PointPopupProps> = ({
       const now = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
       const updatedProperties = { 
         ...feature.properties, 
-        Status: 'Pending'
+        Status: 'Claimed'
         // Note: Contractor is stored as a separate field, not in properties
       };
 
@@ -85,7 +80,7 @@ const PointPopup: React.FC<PointPopupProps> = ({
 
       console.log('[PointPopup] Successfully claimed job');
       
-      if (onStatusUpdate) onStatusUpdate('Pending');
+      if (onStatusUpdate) onStatusUpdate('Claimed');
       setSaving(false);
       onClose();
     } catch (err: any) {
@@ -113,7 +108,7 @@ const PointPopup: React.FC<PointPopupProps> = ({
       const now = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
       const updatedProperties = { 
         ...feature.properties, 
-        Status: 'Complete'
+        Status: 'Completed'
         // Note: Contractor is maintained as a separate field, not in properties
       };
 
@@ -130,7 +125,7 @@ const PointPopup: React.FC<PointPopupProps> = ({
 
       console.log('[PointPopup] Successfully completed job');
 
-      if (onStatusUpdate) onStatusUpdate('Complete');
+      if (onStatusUpdate) onStatusUpdate('Completed');
       setSaving(false);
       onClose();
     } catch (err: any) {
@@ -189,7 +184,7 @@ const PointPopup: React.FC<PointPopupProps> = ({
                   const jobContractor = feature?.properties?.Contractor;
                   const currentUserEmail = userData?.email;
                   
-                  if (currentStatus !== 'pending' && currentStatus !== 'complete') {
+                  if (currentStatus !== 'claimed' && currentStatus !== 'completed') {
                     return (
                       <button
                         className="edit-button"
@@ -210,7 +205,7 @@ const PointPopup: React.FC<PointPopupProps> = ({
                         {saving ? 'Claiming...' : 'Claim it'}
                       </button>
                     );
-                  } else if (currentStatus === 'pending' && jobContractor === currentUserEmail) {
+                  } else if (currentStatus === 'claimed' && jobContractor === currentUserEmail) {
                     // Only show complete button if current user is the contractor who claimed it
                     return (
                       <button
@@ -232,7 +227,7 @@ const PointPopup: React.FC<PointPopupProps> = ({
                         {saving ? 'Completing...' : 'Complete!'}
                       </button>
                     );
-                  } else if (currentStatus === 'pending' && jobContractor !== currentUserEmail) {
+                  } else if (currentStatus === 'claimed' && jobContractor !== currentUserEmail) {
                     // Show status only if job is claimed by someone else
                     return (
                       <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
@@ -381,12 +376,12 @@ const getStatusColor = (status?: string) => {
   
   const statusLower = status.toLowerCase();
   
-  if (statusLower.includes('active')) {
-    return { bg: '#daff99', text: '#166534' };
-  } else if (statusLower.includes('pending')) {
-    return { bg: '#faff99', text: '#92400e' };
-  } else if (statusLower.includes('complete')) {
-    return { bg: '#c7f7ad', text: '#003b09' };
+  if (statusLower.includes('unclaimed')) {
+    return { bg: '#fee2e2', text: '#dc2626' }; // Light red for unclaimed
+  } else if (statusLower.includes('claimed')) {
+    return { bg: '#fef3c7', text: '#d97706' }; // Light yellow for claimed
+  } else if (statusLower.includes('completed')) {
+    return { bg: '#d1fae5', text: '#059669' }; // Light green for completed
   } else {
     return { bg: '#f3f4f6', text: '#6b7280' };
   }

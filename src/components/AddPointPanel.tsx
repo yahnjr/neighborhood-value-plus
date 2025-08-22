@@ -416,7 +416,7 @@ const ServiceTypeStep: React.FC<ServiceTypeStepProps> = ({ onNext, onBack, onSel
 };
 
 const DetailsStep: React.FC<DetailsStepProps> = ({ onBack, onSubmit, isSubmitting }) => {
-    const [status, setStatus] = useState('Active');
+    const [status, setStatus] = useState('Unclaimed');
     const [fullAddress, setFullAddress] = useState('');
     const [referralSource, setReferralSource] = useState('');
     const [estimate, setEstimate] = useState('');
@@ -474,9 +474,9 @@ const DetailsStep: React.FC<DetailsStepProps> = ({ onBack, onSubmit, isSubmittin
                                 background: 'white'
                             }}
                         >
-                            <option value="Active">Active</option>
-                            <option value="Pending">Pending</option>
-                            <option value="Complete">Complete</option>
+                            <option value="Unclaimed">Unclaimed</option>
+                            <option value="Claimed">Claimed</option>
+                            <option value="Completed">Completed</option>
                         </select>
                     </div>
                     

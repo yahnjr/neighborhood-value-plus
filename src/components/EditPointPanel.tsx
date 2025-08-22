@@ -22,7 +22,7 @@ const EditPointPanel: React.FC<EditPointPanelProps> = ({
     const [serviceType, setServiceType] = useState('');
     const [crossStreet, setCrossStreet] = useState('');
     const [neighborhood, setNeighborhood] = useState('');
-    const [status, setStatus] = useState('Active');
+    const [status, setStatus] = useState('Unclaimed');
     const [fullAddress, setFullAddress] = useState('');
     const [referralSource, setReferralSource] = useState('');
     const [estimate, setEstimate] = useState('');
@@ -35,7 +35,7 @@ const EditPointPanel: React.FC<EditPointPanelProps> = ({
             setServiceType(point.properties["Service_Ty"] || '');
             setCrossStreet(point.properties["Cross Stre"] || '');
             setNeighborhood(point.properties["neighbhood"] || '');
-            setStatus(point.properties["Status"] || 'Active');
+            setStatus(point.properties["Status"] || 'Unclaimed');
             setFullAddress(point.properties["Full Addre"] || '');
             setReferralSource(point.properties["Refferal S"] || '');
             setEstimate(point.properties["Estimate"] || '');
@@ -177,9 +177,9 @@ const EditPointPanel: React.FC<EditPointPanelProps> = ({
                             onChange={(e) => setStatus(e.target.value)}
                             disabled={isSubmitting || isDeleting}
                         >
-                            <option value="Active">Active</option>
-                            <option value="Pending">Pending</option>
-                            <option value="Complete">Complete</option>
+                            <option value="Unclaimed">Unclaimed</option>
+                            <option value="Claimed">Claimed</option>
+                            <option value="Completed">Completed</option>
                         </select>
                     </div>
                     <div className="form-group">

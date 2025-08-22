@@ -5,7 +5,7 @@ export interface User {
   email: string;
   role: UserRole;
   displayName?: string;
-  contractorType?: string; // Only for contractor role
+  neighborhood?: string; // Only for contractor role
   createdAt?: string;
   updatedAt?: string;
 }

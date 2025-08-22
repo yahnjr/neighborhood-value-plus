@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import logo from '../assets/logo_notext.png';
 import logoText from '../assets/logo_text.png';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSearch, faFilter, faUser, faPlus, faHardHat, faChartBar } from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faFilter, faUser, faPlus, faHardHat, faChartBar, faTable } from '@fortawesome/free-solid-svg-icons';
 import SearchPanel from "./SearchPanel";
 import FilterPanel, { FilterState } from "./FilterPanel";
 import LoginPanel from "./LoginPanel";
@@ -10,6 +10,7 @@ import AddPointPanel from "./AddPointPanel";
 import ClosestContractorPopup from "./ClosestContractorPopup";
 import AnalyticsLeftPanel from "./AnalyticsLeftPanel";
 import AnalyticsRightPanel from "./AnalyticsRightPanel";
+import ContractorJobTable from "./ContractorJobTable";
 import { useAuth } from '../services/auth-context';
 import { GeoJSONFeature } from '../services/supabaseService';
 
@@ -34,6 +35,7 @@ interface HeaderProps {
     setShowContractors?: (show: boolean) => void;
     analyticsMode?: boolean;
     setAnalyticsMode?: (mode: boolean) => void;
+    onJobClick?: (feature: GeoJSONFeature) => void;
 }
 
 
@@ -52,11 +54,13 @@ const Header: React.FC<HeaderProps> = ({
     showContractors,
     setShowContractors,
     analyticsMode,
-    setAnalyticsMode
+    setAnalyticsMode,
+    onJobClick
 }) => {
     const [activePanel, setActivePanel] = useState<string | null>(null);
     const [analyticsLeftOpen, setAnalyticsLeftOpen] = useState(false);
     const [analyticsRightOpen, setAnalyticsRightOpen] = useState(false);
+    const [contractorJobTableOpen, setContractorJobTableOpen] = useState(false);
     const [closestContractorPopup, setClosestContractorPopup] = useState<{
         addedPoint: GeoJSONFeature;
         contractors: GeoJSONFeature[];
@@ -186,6 +190,15 @@ const Header: React.FC<HeaderProps> = ({
                             <FontAwesomeIcon icon={faChartBar} />
                         </button>
                     )}
+                    {userData?.role === 'contractor' && (
+                        <button 
+                            className={contractorJobTableOpen ? 'active' : ''} 
+                            onClick={() => setContractorJobTableOpen(!contractorJobTableOpen)}
+                            title="Job Dashboard"
+                        >
+                            <FontAwesomeIcon icon={faTable} />
+                        </button>
+                    )}
                 </div>
             </header>
 
@@ -226,13 +239,34 @@ const Header: React.FC<HeaderProps> = ({
 
             {/* Analytics Panels */}
             {analyticsLeftOpen && (
-                <AnalyticsLeftPanel onClose={closeAnalytics} geoJsonData={geoJsonData || {}} />
+                <AnalyticsLeftPanel 
+                    onClose={closeAnalytics} 
+                    geoJsonData={geoJsonData || {}} 
+                    filters={filters}
+                    onFiltersChange={onFiltersChange}
+                />
             )}
             {analyticsRightOpen && (
                 <AnalyticsRightPanel 
                     onClose={closeAnalytics} 
                     filters={filters}
                     onFiltersChange={onFiltersChange}
+                />
+            )}
+
+            {/* Contractor Job Table */}
+            {contractorJobTableOpen && (
+                <ContractorJobTable
+                    isOpen={contractorJobTableOpen}
+                    onClose={() => setContractorJobTableOpen(false)}
+                    geoJsonData={geoJsonData}
+                    filters={filters}
+                    onJobClick={(feature) => {
+                        if (onJobClick) {
+                            onJobClick(feature);
+                        }
+                        setContractorJobTableOpen(false);
+                    }}
                 />
             )}
         </>

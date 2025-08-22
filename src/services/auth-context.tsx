@@ -8,7 +8,7 @@ interface UserData {
   email: string;
   role: UserRole;
   displayName?: string;
-  contractorType?: string;
+  neighborhood?: string;
 }
 
 interface AuthContextType {
@@ -80,7 +80,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       email: data.email,
       role: data.role,
       displayName: data.display_name,
-      contractorType: data.contractor_type,
+      neighborhood: data.neighborhood,
     });
   };
 
@@ -106,7 +106,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .from('profiles')
       .update({
         display_name: data.displayName,
-        contractor_type: data.contractorType,
+        neighborhood: data.neighborhood,
       })
       .eq('id', user.id);
 
